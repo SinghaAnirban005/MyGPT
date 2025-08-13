@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { ClerkProvider } from '@clerk/nextjs'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -9,12 +10,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-gray-50 dark:bg-gray-900`}>
-        <div className="flex h-screen flex-col">
+    <ClerkProvider>
+      <html lang="en">
+        <body className={inter.className}>
           {children}
-        </div>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

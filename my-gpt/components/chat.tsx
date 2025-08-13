@@ -9,6 +9,7 @@ import { FileUpload, FileData } from '@/components/file-upload'
 import { AdvancedImage } from "@cloudinary/react"
 import { Cloudinary } from '@cloudinary/url-gen'
 import { fill } from '@cloudinary/url-gen/actions/resize'
+import { useUser } from '@clerk/nextjs'
 
 const cld = new Cloudinary({
   cloud: {
@@ -23,6 +24,10 @@ export function Chat() {
   const [attachedFiles, setAttachedFiles] = useState<FileData[]>([])
   
   const { messages, sendMessage, status, setMessages } = useChat()
+  const { isSignedIn, user } = useUser()
+
+  console.log('is Signed In --> ', isSignedIn)
+  console.log('user -> ', user)
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -157,6 +162,17 @@ export function Chat() {
         )
       }
     }
+
+    if (!isSignedIn) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <h2 className="text-xl font-semibold mb-4">Please sign in to chat</h2>
+          <a href="/sign-in" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Sign In
+          </a>
+        </div>
+      )
+    }
     
     return (
       <div className="mt-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800 max-w-[300px]">
@@ -177,6 +193,14 @@ export function Chat() {
 
   return (
     <div className="flex flex-col h-full">
+      <div className="p-4 border-b flex items-center gap-2">
+        <img 
+          src={user?.imageUrl} 
+          alt="User avatar" 
+          className="w-8 h-8 rounded-full"
+        />
+        <span>{user?.fullName || user?.primaryEmailAddress?.emailAddress}</span>
+      </div>
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
           {messages.map((message, index) => {
