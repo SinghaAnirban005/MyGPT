@@ -79,8 +79,15 @@ export function Chat() {
       }]
     }
 
+    console.log('All messages -> ', messages)
+
     const messagesUpToEdit = messages.slice(0, messageIndex)
-    const updatedMessages = [...messagesUpToEdit, updatedMessage]
+    const restOfMessages = messages.slice(messageIndex + 2, messages.length)
+    const updatedMessages = [...messagesUpToEdit, ...restOfMessages]
+
+    console.log("uptil updated -> ", messagesUpToEdit)
+    console.log("Rest -> ", restOfMessages)
+    console.log('upadted one --> ', updatedMessage)
 
     setMessages(updatedMessages)
     setEditingMessageId(null)
