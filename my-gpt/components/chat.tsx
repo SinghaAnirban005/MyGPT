@@ -121,7 +121,7 @@ export function Chat() {
   }
 
   const renderFilePreview = (file: any) => {
-    if (file.type && file.type.startsWith('image/')) {
+    if (file.type && file.mediaType.startsWith('image/')) {
       const imageUrl = file.url || file.cdnUrl
       const uuid = file.uuid
       
