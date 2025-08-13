@@ -2,8 +2,16 @@ import { streamText } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 import { getAuth } from '@clerk/nextjs/server'
 import { NextRequest } from 'next/server'
+import { ChatMemoryManager } from '@/lib/memory'
 
 export const runtime = 'edge'
+
+const getMemoryManager = (userId: string) => {
+  return new ChatMemoryManager({
+    apiKey: process.env.MEM0_API_KEY!,
+    userId: userId
+  })
+}
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -18,8 +26,11 @@ export async function POST(req: NextRequest) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const { messages } = await req.json()
-    console.log('Received messages:', messages)
+    const { messages, conversationId } = await req.json()
+    
+    console.log('Received messages for user:', userId, messages.length)
+
+    const memoryManager = getMemoryManager(userId)
 
     const modelMessages = messages.map((message: any) => {
       let content: any = []
@@ -45,16 +56,50 @@ export async function POST(req: NextRequest) {
       return { role: message.role, content }
     })
 
-    console.log('Converted messages for model:', JSON.stringify(modelMessages, null, 2))
+    const contextManagedMessages = memoryManager.manageContextWindow(modelMessages)
+    const latestUserMessage = contextManagedMessages
+      .filter(msg => msg.role === 'user')
+      .pop()
+
+
+    const latestQuery = typeof latestUserMessage?.content === 'string' 
+      ? latestUserMessage.content 
+      : latestUserMessage?.content?.[0]?.text || ''
+    
+
+      const baseSystemPrompt = `You are a helpful AI assistant. You have access to context from previous conversations with this user. Use this context to provide more personalized and relevant responses. Remember details about the user's preferences, past conversations, and context to make your responses more helpful.`
+    
+    const enrichedSystemPrompt = await memoryManager.createEnrichedSystemPrompt(
+      baseSystemPrompt, 
+      latestQuery
+    )
+
+    // Add enriched system message
+    const messagesWithMemory = [
+      { role: 'system', content: enrichedSystemPrompt },
+      ...contextManagedMessages.filter(msg => msg.role !== 'system')
+    ]
+
+    console.log('Messages with memory context:', messagesWithMemory.length)
+    console.log('System prompt length:', enrichedSystemPrompt.length)
+  
 
     const model = groq('meta-llama/llama-4-scout-17b-16e-instruct')
-    console.log('Using Llama for text processing')
 
     const result = await streamText({
       model,
-      messages: modelMessages,
+      messages: messagesWithMemory,
       temperature: 0.7,
     })
+
+    setTimeout(async () => {
+      try {
+        await memoryManager.storeMemory(modelMessages, conversationId)
+        console.log('Conversation stored in memory for user:', userId)
+      } catch (error) {
+        console.error('Failed to store memory:', error)
+      }
+    }, 0)
 
     return result.toUIMessageStreamResponse()
   } catch (error) {

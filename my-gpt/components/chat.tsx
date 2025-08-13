@@ -1,15 +1,15 @@
 'use client'
 import React, { useState } from 'react'
 import { useChat } from '@ai-sdk/react'
+import { useUser, useAuth } from '@clerk/nextjs'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, Edit, Check, X, RotateCcw, Paperclip } from 'lucide-react'
+import { Send, Edit, Check, X, RotateCcw, Paperclip, Brain, Trash2, LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FileUpload, FileData } from '@/components/file-upload'
 import { AdvancedImage } from "@cloudinary/react"
 import { Cloudinary } from '@cloudinary/url-gen'
 import { fill } from '@cloudinary/url-gen/actions/resize'
-import { useUser } from '@clerk/nextjs'
 
 const cld = new Cloudinary({
   cloud: {
@@ -18,16 +18,34 @@ const cld = new Cloudinary({
 })
 
 export function Chat() {
+  const { user, isLoaded, isSignedIn } = useUser()
+  const { signOut } = useAuth()
   const [input, setInput] = useState('')
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const [attachedFiles, setAttachedFiles] = useState<FileData[]>([])
+  const [conversationId] = useState(() => `conv-${Date.now()}`)
+  const [memoryStatus, setMemoryStatus] = useState<'idle' | 'loading' | 'stored'>('idle')
   
-  const { messages, sendMessage, status, setMessages } = useChat()
-  const { isSignedIn, user } = useUser()
 
   console.log('is Signed In --> ', isSignedIn)
   console.log('user -> ', user)
+
+  const { messages, sendMessage, status, setMessages } = useChat({
+    onFinish: () => {
+      // Indicate that memory is being stored
+      setMemoryStatus('loading')
+      setTimeout(() => setMemoryStatus('stored'), 1000)
+      setTimeout(() => setMemoryStatus('idle'), 3000)
+    },
+    onError: (error) => {
+      console.error('Chat error:', error)
+      if (error.message.includes('Unauthorized')) {
+        // Handle auth error - maybe redirect to sign in
+        window.location.href = '/sign-in'
+      }
+    }
+  })
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,6 +123,11 @@ export function Chat() {
     } catch (error) {
       console.error('Error regenerating response:', error)
     }
+  }
+
+  const clearConversation = () => {
+    setMessages([])
+    setMemoryStatus('idle')
   }
 
   const regenerateResponse = async (fromMessageIndex: number) => {
@@ -191,16 +214,87 @@ export function Chat() {
     )
   }
 
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!isSignedIn || !user) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
+          <p className="text-gray-600 mb-4">You need to be signed in to use the chat with memory features.</p>
+          <Button onClick={() => window.location.href = '/sign-in'}>
+            Sign In
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b flex items-center gap-2">
-        <img 
-          src={user?.imageUrl} 
-          alt="User avatar" 
-          className="w-8 h-8 rounded-full"
-        />
-        <span>{user?.fullName || user?.primaryEmailAddress?.emailAddress}</span>
+      {/* Header with user info and memory status */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3">
+          <Brain className="h-5 w-5 text-blue-500" />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">Memory-Enhanced Chat</span>
+            {memoryStatus === 'loading' && (
+              <div className="text-xs text-blue-500 animate-pulse">Storing memory...</div>
+            )}
+            {memoryStatus === 'stored' && (
+              <div className="text-xs text-green-500">Memory updated</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* User info */}
+          <div className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={user.imageUrl} />
+              <AvatarFallback className="text-xs">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium">
+                {user.firstName} {user.lastName}
+              </span>
+              <div className="text-xs h-4">
+                Memory Enabled
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearConversation}
+              title="Clear conversation"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => signOut()}
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {/* Chat messages */}
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
           {messages.map((message, index) => {
@@ -211,6 +305,7 @@ export function Chat() {
               
             const fileParts = message.parts
               ?.filter((part: any) => part.type === 'file')
+              ?.map((part: any) => part.file) || []
 
             const isEditing = editingMessageId === message.id
             const isUserMessage = message.role === 'user'
@@ -221,9 +316,12 @@ export function Chat() {
               <div key={message.id} className="group relative">
                 <div className="flex items-start gap-3">
                   <Avatar className="flex-shrink-0">
-                    <AvatarImage src="" />
+                    <AvatarImage src={message.role === 'user' ? user.imageUrl : ''} />
                     <AvatarFallback className="bg-gray-200 dark:bg-gray-700">
-                      {message.role === 'user' ? 'You' : 'AI'}
+                      {message.role === 'user' 
+                        ? `${user.firstName?.[0]}${user.lastName?.[0]}` 
+                        : 'AI'
+                      }
                     </AvatarFallback>
                   </Avatar>
                   
@@ -322,6 +420,7 @@ export function Chat() {
         </div>
       </div>
       
+      {/* Input area */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
           <FileUpload 
@@ -331,7 +430,7 @@ export function Chat() {
           <div className="flex gap-2">
             <Input
               className="flex-1"
-              placeholder="Message ChatGPT..."
+              placeholder="Message with personalized memory..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={status === 'streaming'}
