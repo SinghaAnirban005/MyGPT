@@ -3,27 +3,52 @@ import React, { useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, Edit, Check, X, RotateCcw } from 'lucide-react'
+import { Send, Edit, Check, X, RotateCcw, Paperclip } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { FileUpload, FileData } from '@/components/file-upload'
+import { AdvancedImage } from "@cloudinary/react"
+import { Cloudinary } from '@cloudinary/url-gen'
+import { fill } from '@cloudinary/url-gen/actions/resize'
+
+const cld = new Cloudinary({
+  cloud: {
+    cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  },
+})
 
 export function Chat() {
   const [input, setInput] = useState('')
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
+  const [attachedFiles, setAttachedFiles] = useState<FileData[]>([])
   
   const { messages, sendMessage, status, setMessages } = useChat()
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const text = input.trim()
-    if (!text || status === 'streaming') return
+    if ((!text && attachedFiles.length === 0) || status === 'streaming') return
     
     setInput('')
+    const currentFiles = [...attachedFiles]
+    setAttachedFiles([])
     
     try {
-      await sendMessage({
-        text: text
-      })
+      if (currentFiles.length > 0) {
+        await sendMessage({
+          text: text,
+          files: currentFiles.map(file => ({
+            type: 'file',
+            mediaType: file.mimeType,
+            filename: file.name,
+            url: file.cdnUrl
+          }))
+        })
+      } else {
+        await sendMessage({
+          text: text
+        })
+      }
     } catch (error) {
       console.error('Error sending message:', error)
     }
@@ -53,13 +78,11 @@ export function Chat() {
         text: trimmedText
       }]
     }
-    console.log('UPdated message ', updatedMessage)
 
     const messagesUpToEdit = messages.slice(0, messageIndex)
     const updatedMessages = [...messagesUpToEdit, updatedMessage]
 
     setMessages(updatedMessages)
-  
     setEditingMessageId(null)
     setEditingText('')
 
@@ -97,16 +120,66 @@ export function Chat() {
     }
   }
 
+  const renderFilePreview = (file: any) => {
+    if (file.type && file.type.startsWith('image/')) {
+      const imageUrl = file.url || file.cdnUrl
+      const uuid = file.uuid
+      
+      if (uuid && cld) {
+        const image = cld.image(uuid).resize(fill().width(300).height(200))
+        return (
+          <div className="mt-2 border rounded-md overflow-hidden max-w-[300px]">
+            <AdvancedImage cldImg={image} className="w-full" />
+            <div className="p-2 bg-background text-xs">
+              <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                View full image
+              </a>
+            </div>
+          </div>
+        )
+      } else if (imageUrl) {
+        return (
+          <div className="mt-2 border rounded-md overflow-hidden max-w-[300px]">
+            <img src={imageUrl} alt={file.name} className="w-full" />
+            <div className="p-2 bg-background text-xs">
+              <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                View full image
+              </a>
+            </div>
+          </div>
+        )
+      }
+    }
+    
+    return (
+      <div className="mt-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800 max-w-[300px]">
+        <div className="flex items-center gap-2">
+          <Paperclip className="h-4 w-4 flex-shrink-0" />
+          <a 
+            href={file.url || file.cdnUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline truncate"
+          >
+            {file.name}
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
           {messages.map((message, index) => {
-
             const textParts = message.parts
               ?.filter((part: any) => part.type === 'text')
               ?.map((part: any) => part.text)
               ?.join('') || ''
+              
+            const fileParts = message.parts
+              ?.filter((part: any) => part.type === 'file')
 
             const isEditing = editingMessageId === message.id
             const isUserMessage = message.role === 'user'
@@ -161,7 +234,15 @@ export function Chat() {
                       </div>
                     ) : (
                       <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 relative">
-                        <div className="whitespace-pre-wrap break-words">{textParts}</div>
+                        {textParts && (
+                          <div className="whitespace-pre-wrap break-words">{textParts}</div>
+                        )}
+                        
+                        {fileParts.map((file, fileIndex) => (
+                          <div key={`${message.id}-file-${fileIndex}`}>
+                            {renderFilePreview(file)}
+                          </div>
+                        ))}
                         
                         {isUserMessage && (
                           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
@@ -211,21 +292,27 @@ export function Chat() {
       </div>
       
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <form onSubmit={onSubmit} className="flex gap-2">
-          <Input
-            className="flex-1"
-            placeholder="Message ChatGPT..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+        <form onSubmit={onSubmit} className="flex flex-col gap-2">
+          <FileUpload 
+            onFilesChange={setAttachedFiles} 
             disabled={status === 'streaming'}
           />
-          <Button 
-            type="submit" 
-            size="icon" 
-            disabled={status === 'streaming' || !input.trim()}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Input
+              className="flex-1"
+              placeholder="Message ChatGPT..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={status === 'streaming'}
+            />
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </form>
       </div>
     </div>

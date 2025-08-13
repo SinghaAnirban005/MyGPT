@@ -11,18 +11,70 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json()
     
-    const modelMessages = messages.map((message: any) => ({
-      role: message.role,
-      content: message.parts
-        ?.filter((part: any) => part.type === 'text')
-        ?.map((part: any) => part.text)
-        ?.join('') || message.content || ''
-    }))
+    console.log('Received messages:', messages)
     
-    const groqModel = groq('llama-3.1-8b-instant')
+    const modelMessages = messages.map((message: any) => {
+      let content: any = []
+      console.log('MESSAGES -> ', message)
+      if (message.parts && Array.isArray(message.parts)) {
+        message.parts.forEach((part: any) => {
+          if (part.type === 'text' && part.text) {
+            content.push({
+              type: 'text',
+              text: part.text
+            })
+          } else if (part.type === 'file') {
+            // Handle file parts (images, documents, etc.)
+            const file = part
+            if (file.type && file.mediaType.startsWith('image/')) {
+              content.push({
+                type: 'image',
+                image: file.url || file.cdnUrl
+              })
+            }
+          } 
+          // else if (part.type === 'image' && part.image) {
+          //   // Handle direct image parts
+          //   content.push({
+          //     type: 'image',
+          //     image_url: {
+          //       url: part.image.url || part.image
+          //     }
+          //   })
+          // }
+        })
+      }
+
+
+      console.log('Content -> ', content)
+      
+      if (content.length === 0) {
+        if (message.content) {
+          content = message.content
+        } else {
+          content = [{ type: 'text', text: '' }]
+        }
+      }
+      
+      if (content.length === 1 && content[0].type === 'text') {
+        content = content[0].text
+      }
+      
+      return {
+        role: message.role,
+        content: content
+      }
+    })
+    
+    console.log('Converted messages for model:', JSON.stringify(modelMessages, null, 2))
+
+    let model
+   
+    model = groq('meta-llama/llama-4-scout-17b-16e-instruct')
+    console.log('Using Llama for text processing')
     
     const result = await streamText({
-      model: groqModel,
+      model: model,
       messages: modelMessages,
       temperature: 0.7,
     })
