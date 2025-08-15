@@ -3,8 +3,9 @@ import { createGroq } from '@ai-sdk/groq'
 import { getAuth } from '@clerk/nextjs/server'
 import { NextRequest } from 'next/server'
 import { ChatMemoryManager } from '@/lib/memory'
+import { ChatService } from '@/lib/chatService'
 
-export const runtime = 'edge'
+// export const runtime = 'edge'
 
 const getMemoryManager = (userId: string) => {
   return new ChatMemoryManager({
@@ -17,24 +18,39 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 })
 
+const chatService = new ChatService()
+
 export async function POST(req: NextRequest) {
   try {
-
     const { userId } = getAuth(req)
-
     if (!userId) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const { messages, conversationId } = await req.json()
-    
+    const { messages, chatId } = await req.json()
+
     console.log('Received messages for user:', userId, messages.length)
+    // console.log('CHAT ID ->', chatId)
+    // Ensure chat exists in MongoDB, create if it doesn't
+    // let chat = await chatService.getChatById(chatId, userId)
+    // console.log('CHAT -> ', chat)
+    // if (!chat) {
+    //   // Generate title from first user message
+    //   const firstUserMessage = messages.find((msg: any) => msg.role === 'user')
+    //   const title = firstUserMessage 
+    //     ? await chatService.generateChatTitle([firstUserMessage])
+    //     : 'New Chat'
+      
+    //   chat = await chatService.createChat(userId, title)
+    // }
+
+    console.log('chatId ----> ', chatId)
 
     const memoryManager = getMemoryManager(userId)
 
     const modelMessages = messages.map((message: any) => {
       let content: any = []
-
+      
       if (Array.isArray(message.parts)) {
         for (const part of message.parts) {
           if (part.type === 'text' && part.text) {
@@ -57,20 +73,19 @@ export async function POST(req: NextRequest) {
     })
 
     const contextManagedMessages = memoryManager.manageContextWindow(modelMessages)
+
     const latestUserMessage = contextManagedMessages
       .filter(msg => msg.role === 'user')
       .pop()
 
-
-    const latestQuery = typeof latestUserMessage?.content === 'string' 
-      ? latestUserMessage.content 
+    const latestQuery = typeof latestUserMessage?.content === 'string'
+      ? latestUserMessage.content
       : latestUserMessage?.content?.[0]?.text || ''
-    
 
-      const baseSystemPrompt = `You are a helpful AI assistant. You have access to context from previous conversations with this user. Use this context to provide more personalized and relevant responses. Remember details about the user's preferences, past conversations, and context to make your responses more helpful.`
-    
+    const baseSystemPrompt = `You are a helpful AI assistant. You have access to context from previous conversations with this user. Use this context to provide more personalized and relevant responses. Remember details about the user's preferences, past conversations, and context to make your responses more helpful.`
+
     const enrichedSystemPrompt = await memoryManager.createEnrichedSystemPrompt(
-      baseSystemPrompt, 
+      baseSystemPrompt,
       latestQuery
     )
 
@@ -82,7 +97,6 @@ export async function POST(req: NextRequest) {
 
     console.log('Messages with memory context:', messagesWithMemory.length)
     console.log('System prompt length:', enrichedSystemPrompt.length)
-  
 
     const model = groq('meta-llama/llama-4-scout-17b-16e-instruct')
 
@@ -92,10 +106,16 @@ export async function POST(req: NextRequest) {
       temperature: 0.7,
     })
 
+    // Store conversation in both memory and MongoDB after response
     setTimeout(async () => {
       try {
-        await memoryManager.storeMemory(modelMessages, conversationId)
+        // Store in mem0 for memory
+        await memoryManager.storeMemory(modelMessages, chatId)
         console.log('Conversation stored in memory for user:', userId)
+        
+        // The messages will be saved to MongoDB by the client-side Chat component
+        // when it receives the response through the onFinish callback
+        
       } catch (error) {
         console.error('Failed to store memory:', error)
       }
