@@ -1,5 +1,6 @@
 'use client'
-import React, { useState } from 'react'
+
+import React, { useState, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useUser, useAuth } from '@clerk/nextjs'
 import { Input } from '@/components/ui/input'
@@ -17,65 +18,187 @@ const cld = new Cloudinary({
   },
 })
 
-export function Chat() {
+interface ChatProps {
+  chatId: string
+  onChatUpdate?: () => void
+}
+
+export function Chat({ chatId, onChatUpdate }: ChatProps) {
   const { user, isLoaded, isSignedIn } = useUser()
   const { signOut } = useAuth()
   const [input, setInput] = useState('')
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const [attachedFiles, setAttachedFiles] = useState<FileData[]>([])
-  const [conversationId] = useState(() => `conv-${Date.now()}`)
   const [memoryStatus, setMemoryStatus] = useState<'idle' | 'loading' | 'stored'>('idle')
-  
-
-  console.log('is Signed In --> ', isSignedIn)
-  console.log('user -> ', user)
+  const [chatTitle, setChatTitle] = useState<string>('')
+  const [loadingChat, setLoadingChat] = useState(true)
 
   const { messages, sendMessage, status, setMessages } = useChat({
-    onFinish: () => {
-      // Indicate that memory is being stored
-      setMemoryStatus('loading')
-      setTimeout(() => setMemoryStatus('stored'), 1000)
-      setTimeout(() => setMemoryStatus('idle'), 3000)
-    },
-    onError: (error) => {
+    onFinish: async (message: any) => {
+    setMemoryStatus('loading')
+    
+    await saveAssistantMessage(message)
+    
+    setMemoryStatus('stored')
+    setTimeout(() => setMemoryStatus('idle'), 3000)
+    
+    onChatUpdate?.()
+  },
+    
+    onError: (error: any) => {
       console.error('Chat error:', error)
       if (error.message.includes('Unauthorized')) {
-        // Handle auth error - maybe redirect to sign in
         window.location.href = '/sign-in'
       }
-    }
+    },
   })
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const text = input.trim()
-    if ((!text && attachedFiles.length === 0) || status === 'streaming') return
-    
-    setInput('')
-    const currentFiles = [...attachedFiles]
-    setAttachedFiles([])
-    
+
+  useEffect(() => {
+    if (chatId && isSignedIn) {
+      loadChat()
+    }
+  }, [chatId, isSignedIn])
+
+  const loadChat = async () => {
     try {
-      if (currentFiles.length > 0) {
-        await sendMessage({
-          text: text,
-          files: currentFiles.map(file => ({
-            type: 'file',
-            mediaType: file.mimeType,
-            filename: file.name,
-            url: file.cdnUrl
-          }))
-        })
-      } else {
-        await sendMessage({
-          text: text
-        })
+      setLoadingChat(true)
+      const response = await fetch(`/api/chats/${chatId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const chat = data.chat
+        setChatTitle(chat.title)
+        
+        const convertedMessages = chat.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          parts: msg.parts || [{ type: 'text', text: msg.content }]
+        }))
+
+        
+        setMessages(convertedMessages)
+      } else if (response.status === 404) {
+        console.warn('Chat not found:', chatId)
       }
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error loading chat:', error)
+    } finally {
+      setLoadingChat(false)
     }
   }
+
+  const saveAssistantMessage = async (assistantMessage: any) => {
+  try {
+    console.log('Saving assistant message')
+    console.log('Assistant message to save:', assistantMessage)
+    
+    // Get existing messages from database (should now include the user message)
+    const existingResponse = await fetch(`/api/chats/${chatId}`)
+    let existingMessages = []
+    
+    if (existingResponse.ok) {
+      const chatData = await existingResponse.json()
+      existingMessages = chatData.chat?.messages || []
+    }
+    
+    console.log('Existing messages before adding assistant message:', existingMessages)
+    
+    const messageObj = assistantMessage.message || assistantMessage
+    
+    const formattedAssistantMessage = {
+      id: messageObj.id,
+      role: messageObj.role,
+      content: Array.isArray(messageObj.parts)
+        ? messageObj.parts
+            .filter((p: any) => p.type === 'text' && p.text)
+            .map((p: any) => p.text)
+            .join('') || ''
+        : typeof messageObj.content === 'string'
+          ? messageObj.content
+          : '',
+      parts: messageObj.parts || [{ type: 'text', text: messageObj.content }],
+      timestamp: new Date()
+    }
+    
+    // Combine existing messages with new assistant message
+    const allMessages = [...existingMessages, formattedAssistantMessage]
+    
+    console.log('All messages including new assistant message:', allMessages)
+    
+    const response = await fetch(`/api/chats/${chatId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        messages: allMessages
+      }),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to save assistant message: ${response.statusText}`)
+    }
+    
+    console.log('Assistant message saved successfully')
+    
+  } catch (error) {
+    console.error('Error saving assistant message:', error)
+  }
+}
+
+  const generateTitleFromMessage = (message: any) => {
+    const content = message.content || ''
+    return content.length > 50 ? content.substring(0, 50) + '...' : content || 'New Chat'
+  }
+
+const onSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  const text = input.trim()
+  if ((!text && attachedFiles.length === 0) || status === 'streaming') return
+  
+  setInput('')
+  const currentFiles = [...attachedFiles]
+  console.log('current files ', currentFiles)
+  setAttachedFiles([])
+  
+  try {
+    const userMessageData = {
+      text: text,
+      files: currentFiles.length > 0 ? currentFiles.map(file => ({
+        type: 'file',
+        mediaType: file.mimeType,
+        filename: file.name,
+        url: file.cdnUrl
+      })) : undefined
+    }
+
+    console.log('user Message Data -> ', userMessageData)
+    
+    // Save user message immediately before sending to API
+    await saveUserMessage(userMessageData)
+    
+    // Send message to AI
+    if (currentFiles.length > 0) {
+      await sendMessage({
+        text: text,
+        files: currentFiles.map(file => ({
+          type: 'file',
+          mediaType: file.mimeType,
+          filename: file.name,
+          url: file.cdnUrl
+        }))
+      })
+    } else {
+      await sendMessage({
+        text: text
+      })
+    }
+  } catch (error) {
+    console.error('Error sending message:', error)
+  }
+}
 
   const startEditingMessage = (messageId: string, currentText: string) => {
     setEditingMessageId(messageId)
@@ -94,23 +217,9 @@ export function Chat() {
     const messageIndex = messages.findIndex(msg => msg.id === messageId)
     if (messageIndex === -1) return
 
-    const updatedMessage = {
-      ...messages[messageIndex],
-      parts: [{
-        type: 'text',
-        text: trimmedText
-      }]
-    }
-
-    console.log('All messages -> ', messages)
-
     const messagesUpToEdit = messages.slice(0, messageIndex)
     const restOfMessages = messages.slice(messageIndex + 2, messages.length)
     const updatedMessages = [...messagesUpToEdit, ...restOfMessages]
-
-    console.log("uptil updated -> ", messagesUpToEdit)
-    console.log("Rest -> ", restOfMessages)
-    console.log('upadted one --> ', updatedMessage)
 
     setMessages(updatedMessages)
     setEditingMessageId(null)
@@ -123,11 +232,6 @@ export function Chat() {
     } catch (error) {
       console.error('Error regenerating response:', error)
     }
-  }
-
-  const clearConversation = () => {
-    setMessages([])
-    setMemoryStatus('idle')
   }
 
   const regenerateResponse = async (fromMessageIndex: number) => {
@@ -155,8 +259,81 @@ export function Chat() {
     }
   }
 
+  const saveUserMessage = async (userMessage: any) => {
+  try {
+    console.log('=== Saving User Message Immediately ===')
+    console.log('User message to save:', userMessage)
+    
+    // Get existing messages from database
+    const existingResponse = await fetch(`/api/chats/${chatId}`)
+    let existingMessages = []
+    
+    if (existingResponse.ok) {
+      const chatData = await existingResponse.json()
+      existingMessages = chatData.chat?.messages || []
+    }
+    
+    console.log('Existing messages before adding user message:', existingMessages)
+    
+    // Format the user message
+    const formattedUserMessage = {
+      id: userMessage.id || `user-${Date.now()}`,
+      role: 'user',
+      content: userMessage.text || userMessage.content || '',
+      parts: userMessage.parts || [{ type: 'text', text: userMessage.text || userMessage.content || '' }],
+      timestamp: new Date()
+    }
+    
+    // Add files if present
+    if (userMessage.files && userMessage.files.length > 0) {
+      const fileParts = userMessage.files.map(file => ({
+        type: 'file',
+        file: {
+          type: 'file',
+          mediaType: file.mediaType,
+          name: file.filename,
+          url: file.url || file.cdnUrl,
+        }
+      }))
+      formattedUserMessage.parts = [
+        ...formattedUserMessage.parts,
+        ...fileParts
+      ]
+    }
+    
+    // Combine existing messages with new user message
+    const allMessages = [...existingMessages, formattedUserMessage]
+    
+    console.log('All messages including new user message:', allMessages)
+    
+    // Save to database
+    const response = await fetch(`/api/chats/${chatId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        messages: allMessages,
+        ...(chatTitle === 'New Chat' && {
+          title: generateTitleFromMessage(formattedUserMessage)
+        })
+      }),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to save user message: ${response.statusText}`)
+    }
+    
+    console.log('User message saved successfully')
+    
+  } catch (error) {
+    console.error('Error saving user message:', error)
+  }
+}
+
+
   const renderFilePreview = (file: any) => {
-    if (file.type && file.mediaType.startsWith('image/')) {
+    if (file && file.mediaType.startsWith('image/')) {
       const imageUrl = file.url || file.cdnUrl
       const uuid = file.uuid
       
@@ -185,7 +362,6 @@ export function Chat() {
         )
       }
     }
-
     if (!isSignedIn) {
       return (
         <div className="flex flex-col items-center justify-center h-full">
@@ -197,24 +373,26 @@ export function Chat() {
       )
     }
     
+    
     return (
       <div className="mt-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800 max-w-[300px]">
         <div className="flex items-center gap-2">
           <Paperclip className="h-4 w-4 flex-shrink-0" />
           <a 
-            href={file.url || file.cdnUrl} 
+            href={file?.cdnUrl || ''} 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-sm text-primary hover:underline truncate"
           >
             {file.name}
           </a>
+          {file?.filename || "-"}
         </div>
       </div>
     )
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || loadingChat) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -238,12 +416,11 @@ export function Chat() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with user info and memory status */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <Brain className="h-5 w-5 text-blue-500" />
           <div className="flex flex-col">
-            <span className="text-sm font-medium">Memory-Enhanced Chat</span>
+            <span className="text-sm font-medium">{chatTitle || 'New Chat'}</span>
             {memoryStatus === 'loading' && (
               <div className="text-xs text-blue-500 animate-pulse">Storing memory...</div>
             )}
@@ -254,7 +431,6 @@ export function Chat() {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* User info */}
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarImage src={user.imageUrl} />
@@ -272,16 +448,7 @@ export function Chat() {
             </div>
           </div>
 
-          {/* Action buttons */}
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={clearConversation}
-              title="Clear conversation"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -294,7 +461,6 @@ export function Chat() {
         </div>
       </div>
 
-      {/* Chat messages */}
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
           {messages.map((message, index) => {
@@ -372,7 +538,6 @@ export function Chat() {
                             {renderFilePreview(file)}
                           </div>
                         ))}
-                        
                         {isUserMessage && (
                           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                             <Button
