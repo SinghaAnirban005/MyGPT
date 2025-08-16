@@ -27,20 +27,31 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
   const [chatTitle, setChatTitle] = useState<string>('')
   const [loadingChat, setLoadingChat] = useState(true)
 
-  const { messages, sendMessage, status, setMessages } = useChat({
-    onFinish: async (message: any) => {
-      await saveAssistantMessage(message)
+const { messages, sendMessage, status, setMessages } = useChat({
+  onFinish: async (message: any) => {
+    const updatedMessages = await saveAssistantMessage(message)
+    
+    // Now sync the real IDs from database to the local state
+    if (updatedMessages) {
+      const convertedMessages = updatedMessages.map((msg: any) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        parts: msg.parts || [{ type: 'text', text: msg.content }],
+      }))
+      setMessages(convertedMessages)
+    }
 
-      onChatUpdate?.()
-    },
+    onChatUpdate?.()
+  },
 
-    onError: (error: any) => {
-      console.error('Chat error:', error)
-      if (error.message.includes('Unauthorized')) {
-        window.location.href = '/sign-in'
-      }
-    },
-  })
+  onError: (error: any) => {
+    console.error('Chat error:', error)
+    if (error.message.includes('Unauthorized')) {
+      window.location.href = '/sign-in'
+    }
+  },
+})
 
   useEffect(() => {
     if (chatId && isSignedIn) {
@@ -75,114 +86,158 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
     }
   }
 
-  const saveAssistantMessage = async (assistantMessage: any) => {
-    try {
-      console.log('Saving assistant message')
-      console.log('Assistant message to save:', assistantMessage)
 
-      const existingResponse = await fetch(`/api/chats/${chatId}`)
-      let existingMessages = []
+  useEffect(() => {
+  // This will run whenever messages change
+  // We need to sync any user messages that might have temporary IDs
+  const syncMessageIds = async () => {
+    if (messages.length === 0) return
+    
+    const lastMessage = messages[messages.length - 1]
+    
+    // Check if the last message is a user message with a temporary ID
+    if (lastMessage.role === 'user' && lastMessage.id.startsWith('user-')) {
+      try {
 
-      if (existingResponse.ok) {
-        const chatData = await existingResponse.json()
-        existingMessages = chatData.chat?.messages || []
+        const response = await fetch(`/api/chats/${chatId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const dbMessages = data.chat?.messages || []
+          
+          if (dbMessages.length > 0) {
+            // Update messages with real IDs from database
+            const convertedMessages = dbMessages.map((msg: any) => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              parts: msg.parts || [{ type: 'text', text: msg.content }],
+            }))
+            setMessages(convertedMessages)
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing message IDs:', error)
       }
-
-      console.log('Existing messages before adding assistant message:', existingMessages)
-
-      const messageObj = assistantMessage.message || assistantMessage
-
-      const formattedAssistantMessage = {
-        id: messageObj.id,
-        role: messageObj.role,
-        content: Array.isArray(messageObj.parts)
-          ? messageObj.parts
-              .filter((p: any) => p.type === 'text' && p.text)
-              .map((p: any) => p.text)
-              .join('') || ''
-          : typeof messageObj.content === 'string'
-            ? messageObj.content
-            : '',
-        parts: messageObj.parts || [{ type: 'text', text: messageObj.content }],
-        timestamp: new Date(),
-      }
-
-      // Combine existing messages with new assistant message
-      const allMessages = [...existingMessages, formattedAssistantMessage]
-
-      console.log('All messages including new assistant message:', allMessages)
-
-      const response = await fetch(`/api/chats/${chatId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: allMessages,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to save assistant message: ${response.statusText}`)
-      }
-
-      console.log('Assistant message saved successfully')
-    } catch (error) {
-      console.error('Error saving assistant message:', error)
     }
   }
+
+  // Only sync if we have messages and the last one might need ID syncing
+  if (messages.length > 0) {
+    const timeoutId = setTimeout(syncMessageIds, 100)
+    return () => clearTimeout(timeoutId)
+  }
+}, [messages.length, chatId]) 
+
+const saveAssistantMessage = async (assistantMessage: any) => {
+  try {
+    console.log('Saving assistant message')
+    console.log('Assistant message to save:', assistantMessage)
+
+    const existingResponse = await fetch(`/api/chats/${chatId}`)
+    let existingMessages = []
+
+    if (existingResponse.ok) {
+      const chatData = await existingResponse.json()
+      existingMessages = chatData.chat?.messages || []
+    }
+
+    console.log('Existing messages before adding assistant message:', existingMessages)
+
+    const messageObj = assistantMessage.message || assistantMessage
+
+    const formattedAssistantMessage = {
+      id: messageObj.id,
+      role: messageObj.role,
+      content: Array.isArray(messageObj.parts)
+        ? messageObj.parts
+            .filter((p: any) => p.type === 'text' && p.text)
+            .map((p: any) => p.text)
+            .join('') || ''
+        : typeof messageObj.content === 'string'
+          ? messageObj.content
+          : '',
+      parts: messageObj.parts || [{ type: 'text', text: messageObj.content }],
+      timestamp: new Date(),
+    }
+
+    const allMessages = [...existingMessages, formattedAssistantMessage]
+
+    console.log('All messages including new assistant message:', allMessages)
+
+    const response = await fetch(`/api/chats/${chatId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: allMessages,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to save assistant message: ${response.statusText}`)
+    }
+
+    const result = await response.json()
+    console.log('Assistant message saved successfully')
+    
+    // Return the updated messages with actual IDs
+    return result.messages || allMessages
+
+  } catch (error) {
+    console.error('Error saving assistant message:', error)
+    throw error
+  }
+}
 
   const generateTitleFromMessage = (message: any) => {
     const content = message.content || ''
     return content.length > 50 ? content.substring(0, 50) + '...' : content || 'New Chat'
   }
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const text = input.trim()
-    if ((!text && attachedFiles.length === 0) || status === 'streaming') return
+const onSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  const text = input.trim()
+  if ((!text && attachedFiles.length === 0) || status === 'streaming') return
 
-    setInput('')
-    const currentFiles = [...attachedFiles]
-    setAttachedFiles([])
+  setInput('')
+  const currentFiles = [...attachedFiles]
+  setAttachedFiles([])
 
-    try {
-      const userMessageData = {
-        text: text,
-        files:
-          currentFiles.length > 0
-            ? currentFiles.map((file) => ({
-                type: 'file',
-                mediaType: file.mimeType,
-                filename: file.name,
-                url: file.cdnUrl,
-              }))
-            : undefined,
-      }
-
-      console.log('user message ', userMessageData)
-
-      await saveUserMessage(userMessageData)
-
-      if (currentFiles.length > 0) {
-        await sendMessage({
-          text: text,
-          files: currentFiles.map((file) => ({
-            type: 'file' as const,
+  try {
+    const userMessageData = {
+      text: text,
+      files: currentFiles.length > 0
+        ? currentFiles.map((file) => ({
+            type: 'file',
             mediaType: file.mimeType,
             filename: file.name,
             url: file.cdnUrl,
-          })),
-        })
-      } else {
-        await sendMessage({
-          text: text,
-        })
-      }
-    } catch (error) {
-      console.error('Error sending message:', error)
+          }))
+        : undefined,
     }
+
+    await saveUserMessage(userMessageData)
+
+    if (currentFiles.length > 0) {
+      await sendMessage({
+        text: text,
+        files: currentFiles.map((file) => ({
+          type: 'file' as const,
+          mediaType: file.mimeType,
+          filename: file.name,
+          url: file.cdnUrl,
+        })),
+      })
+    } else {
+      await sendMessage({
+        text: text,
+      })
+    }
+  } catch (error) {
+    console.error('Error sending message:', error)
   }
+}
 
   const startEditingMessage = (messageId: string, currentText: string) => {
     setEditingMessageId(messageId)
@@ -248,7 +303,7 @@ const saveEditedMessage = async (messageId: string) => {
     setAttachedFiles((prev) => [...prev, fileData])
   }
 
-  const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boolean }) => {
+const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boolean }) => {
   try {
     console.log('=== Saving User Message ===')
     console.log('User message to save:', userMessage)
@@ -309,11 +364,11 @@ const saveEditedMessage = async (messageId: string) => {
       throw new Error(`Failed to save user message: ${response.statusText}`)
     }
     
-    console.log('User message saved successfully')
-    
+    const result = await response.json()
+    console.log('User message saved successfully:', result)
   } catch (error) {
     console.error('Error saving user message:', error)
-    throw error // Re-throw so the calling function can handle it
+    throw error
   }
 }
 
@@ -328,7 +383,6 @@ const saveEditedMessage = async (messageId: string) => {
     const size = file.size || 0
     const fileType = getFileType(mediaType)
 
-    // Image preview (existing functionality)
     if (fileType === 'image') {
       return (
         <div className="mt-2 max-w-md overflow-hidden rounded-lg">
@@ -438,7 +492,6 @@ const saveEditedMessage = async (messageId: string) => {
             </div>
 
             <div className="flex gap-2">
-              {/* View/Open button */}
               <a
                 href={url}
                 target="_blank"
@@ -448,8 +501,6 @@ const saveEditedMessage = async (messageId: string) => {
                 <Eye className="h-3 w-3" />
                 View
               </a>
-
-              {/* Download button */}
               <a
                 href={url}
                 download={name}
@@ -554,7 +605,7 @@ const saveEditedMessage = async (messageId: string) => {
         autoFocus
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
-            cancelEditing()
+            console.log('message ID ', message.id)
           } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             saveEditedMessage(message.id)
           }

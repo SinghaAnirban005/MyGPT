@@ -62,7 +62,68 @@ export class ChatService {
     return updatedMessages
   }
 
-  async replaceMessageAndRemoveAfter(
+  async updateChat(
+    chatId: string,
+    userId: string,
+    updateData: {
+      messages?: ChatMessage[]
+      title?: string
+    }
+  ): Promise<Chat> {
+    const collection = await this.getCollection()
+
+    const existingChat = await collection.findOne({ id: chatId, userId })
+
+    if (!existingChat) {
+      const newChat: Chat = {
+        id: chatId,
+        userId,
+        messages: updateData.messages || [],
+        title: updateData.title || 'New Chat',
+        isShared: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastMessageAt: updateData.messages && updateData.messages.length > 0 
+          ? updateData.messages[updateData.messages.length - 1]?.timestamp || new Date()
+          : new Date(),
+      }
+
+      await collection.insertOne(newChat)
+      return newChat
+    }
+
+    const updateFields: any = {
+      updatedAt: new Date(),
+    }
+
+    if (updateData.messages) {
+      // Generate unique IDs for messages that don't have them
+      const messagesWithIds = updateData.messages.map(msg => ({
+        ...msg,
+        id: msg.id || nanoid(),
+        timestamp: msg.timestamp || new Date()
+      }))
+
+      updateFields.messages = messagesWithIds
+      updateFields.lastMessageAt = messagesWithIds.length > 0
+        ? messagesWithIds[messagesWithIds.length - 1].timestamp
+        : new Date()
+    }
+
+    if (updateData.title) {
+      updateFields.title = updateData.title
+    }
+
+    await collection.updateOne(
+      { id: chatId, userId },
+      { $set: updateFields }
+    )
+
+    const updatedChat = await collection.findOne({ id: chatId, userId })
+    return updatedChat!
+  }
+
+async replaceMessageAndRemoveAfter(
     chatId: string,
     messageId: string,
     newMessage: ChatMessage,
@@ -70,7 +131,6 @@ export class ChatService {
   ): Promise<ChatMessage[]> {
     const collection = await this.getCollection()
     
-    // First get the chat to find the message position
     const chat = await collection.findOne({ id: chatId, userId })
     if (!chat) {
       throw new Error('Chat not found')
@@ -83,10 +143,15 @@ export class ChatService {
       throw new Error('Message not found')
     }
 
-    // Create new messages array up to and including the edited message
+    const messageWithId = {
+      ...newMessage,
+      id: newMessage.id || nanoid(),
+      timestamp: newMessage.timestamp || new Date()
+    }
+
     const updatedMessages = [
       ...messages.slice(0, messageIndex),
-      newMessage
+      messageWithId
     ]
 
     await collection.updateOne(
@@ -95,7 +160,7 @@ export class ChatService {
         $set: {
           messages: updatedMessages,
           updatedAt: new Date(),
-          lastMessageAt: newMessage.timestamp || new Date()
+          lastMessageAt: messageWithId.timestamp
         }
       }
     )

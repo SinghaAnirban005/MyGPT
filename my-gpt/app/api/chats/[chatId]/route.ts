@@ -28,32 +28,41 @@ export async function GET(req: NextRequest, { params }: { params: { chatId: stri
 }
 
 // Update chat
-export async function PATCH(req: NextRequest, { params }: { params: { chatId: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { chatId: string } }
+) {
   try {
     const { userId } = getAuth(req)
     if (!userId) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const { title, messages } = await req.json()
     const { chatId } = await params
+    const body = await req.json()
+    const { messages, title } = body
 
-    if (title !== undefined) {
-      await chatService.updateChatTitle(chatId, title, userId)
-    }
+    // Update the chat with new messages
+    const updatedChat = await chatService.updateChat(
+      chatId,
+      userId,
+      {
+        messages,
+        ...(title && { title })
+      }
+    )
 
-    if (messages !== undefined) {
-      await chatService.updateChatMessages(chatId, messages, userId)
-    }
+    return Response.json({
+      success: true,
+      chat: updatedChat,
+      messages: updatedChat.messages
+    })
 
-    const updatedChat = await chatService.getChatById(chatId, userId)
-    return Response.json({ chat: updatedChat })
   } catch (error) {
     console.error('Error updating chat:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
 }
-
 // Delete chat
 export async function DELETE(req: NextRequest, { params }: { params: { chatId: string } }) {
   try {
