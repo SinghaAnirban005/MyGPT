@@ -25,6 +25,84 @@ export class ChatService {
     return chat
   }
 
+    async removeMessagesFrom(
+    chatId: string,
+    messageId: string,
+    userId: string
+  ): Promise<ChatMessage[]> {
+    const collection = await this.getCollection()
+    
+    const chat = await collection.findOne({ id: chatId, userId })
+    if (!chat) {
+      throw new Error('Chat not found')
+    }
+
+    const messages = chat.messages || []
+    const messageIndex = messages.findIndex(msg => msg.id === messageId)
+    
+    if (messageIndex === -1) {
+      throw new Error('Message not found')
+    }
+
+    // Keep only messages before the specified message
+    const updatedMessages = messages.slice(0, messageIndex)
+    const lastMessage = updatedMessages[updatedMessages.length - 1]
+
+    await collection.updateOne(
+      { id: chatId, userId },
+      {
+        $set: {
+          messages: updatedMessages,
+          updatedAt: new Date(),
+          lastMessageAt: lastMessage?.timestamp || new Date()
+        }
+      }
+    )
+
+    return updatedMessages
+  }
+
+  async replaceMessageAndRemoveAfter(
+    chatId: string,
+    messageId: string,
+    newMessage: ChatMessage,
+    userId: string
+  ): Promise<ChatMessage[]> {
+    const collection = await this.getCollection()
+    
+    // First get the chat to find the message position
+    const chat = await collection.findOne({ id: chatId, userId })
+    if (!chat) {
+      throw new Error('Chat not found')
+    }
+
+    const messages = chat.messages || []
+    const messageIndex = messages.findIndex(msg => msg.id === messageId)
+    
+    if (messageIndex === -1) {
+      throw new Error('Message not found')
+    }
+
+    // Create new messages array up to and including the edited message
+    const updatedMessages = [
+      ...messages.slice(0, messageIndex),
+      newMessage
+    ]
+
+    await collection.updateOne(
+      { id: chatId, userId },
+      {
+        $set: {
+          messages: updatedMessages,
+          updatedAt: new Date(),
+          lastMessageAt: newMessage.timestamp || new Date()
+        }
+      }
+    )
+
+    return updatedMessages
+  }
+
   async getUserChats(userId: string): Promise<Chat[]> {
     const collection = await this.getCollection()
 

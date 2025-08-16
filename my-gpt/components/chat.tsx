@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useUser, useAuth } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, Edit, Check, X, Download, Eye } from 'lucide-react'
+import { ArrowUp, Edit, Check, X, Download, Eye, AlertTriangle } from 'lucide-react'
 import { FileData } from '@/lib/file-data'
 import { Skeleton } from './ui/skeleton'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
@@ -19,7 +19,6 @@ interface ChatProps {
 
 export function Chat({ chatId, onChatUpdate }: ChatProps) {
   const { user, isLoaded, isSignedIn } = useUser()
-  const { signOut } = useAuth()
   const [input, setInput] = useState('')
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
@@ -195,98 +194,128 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
     setEditingText('')
   }
 
-  const saveEditedMessage = async (messageId: string) => {
-    const trimmedText = editingText.trim()
-    if (!trimmedText) return
+const saveEditedMessage = async (messageId: string) => {
+  const trimmedText = editingText.trim()
+  if (!trimmedText) return
 
-    const messageIndex = messages.findIndex((msg) => msg.id === messageId)
-    if (messageIndex === -1) return
+  const messageIndex = messages.findIndex(msg => msg.id === messageId)
+  if (messageIndex === -1) return
+
+  try {
+    console.log('Editing message:', messageId, 'with content:', trimmedText)
+  
+    const editResponse = await fetch(`/api/chats/${chatId}/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        content: trimmedText,
+        action: 'replace'
+      }),
+    })
+
+    if (!editResponse.ok) {
+      throw new Error('Failed to edit message')
+    }
+
+    const editResult = await editResponse.json()
+    console.log('Edit result:', editResult)
 
     const messagesUpToEdit = messages.slice(0, messageIndex)
-    const restOfMessages = messages.slice(messageIndex + 2, messages.length)
-    const updatedMessages = [...messagesUpToEdit, ...restOfMessages]
+     const restOfMessages = messages.slice(messageIndex + 2, messages.length)
+    setMessages([
+      ...messagesUpToEdit,
+      ...restOfMessages
+    ])
 
-    setMessages(updatedMessages)
     setEditingMessageId(null)
     setEditingText('')
 
-    try {
-      await sendMessage({
-        text: trimmedText,
-      })
-    } catch (error) {
-      console.error('Error regenerating response:', error)
-    }
+    await sendMessage({
+      text: trimmedText
+    })
+
+    console.log('Message edited and regenerated successfully')
+
+  } catch (error) {
+    console.error('Error editing message:', error)
+    alert('Failed to edit message. Please try again.')
   }
+}
 
   const handleFileUpload = (fileData: any) => {
     setAttachedFiles((prev) => [...prev, fileData])
   }
 
-  const saveUserMessage = async (userMessage: any) => {
-    try {
-      console.log('=== Saving User Message Immediately ===')
-      console.log('User message to save:', userMessage)
+  const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boolean }) => {
+  try {
+    console.log('=== Saving User Message ===')
+    console.log('User message to save:', userMessage)
+    console.log('Options:', options)
 
-      const existingResponse = await fetch(`/api/chats/${chatId}`)
-      let existingMessages = []
-
-      if (existingResponse.ok) {
-        const chatData = await existingResponse.json()
-        existingMessages = chatData.chat?.messages || []
-      }
-
-      console.log('Existing messages before adding user message:', existingMessages)
-
-      const formattedUserMessage = {
-        id: userMessage.id || `user-${Date.now()}`,
-        role: 'user',
-        content: userMessage.text || userMessage.content || '',
-        parts: userMessage.parts || [
-          { type: 'text', text: userMessage.text || userMessage.content || '' },
-        ],
-        timestamp: new Date(),
-      }
-
-      if (userMessage.files && userMessage.files.length > 0) {
-        const fileParts = userMessage.files.map((file) => ({
-          type: 'file',
-          file: {
-            type: 'file',
-            mediaType: file.mediaType,
-            name: file.filename,
-            url: file.url || file.cdnUrl,
-          },
-        }))
-        formattedUserMessage.parts = [...formattedUserMessage.parts, ...fileParts]
-      }
-
-      const allMessages = [...existingMessages, formattedUserMessage]
-
-      console.log('All messages including new user message:', allMessages)
-
-      const response = await fetch(`/api/chats/${chatId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: allMessages,
-          ...(chatTitle === 'New Chat' && {
-            title: generateTitleFromMessage(formattedUserMessage),
-          }),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to save user message: ${response.statusText}`)
-      }
-
-      console.log('User message saved successfully')
-    } catch (error) {
-      console.error('Error saving user message:', error)
+    const existingResponse = await fetch(`/api/chats/${chatId}`)
+    let existingMessages = []
+    
+    if (existingResponse.ok) {
+      const chatData = await existingResponse.json()
+      existingMessages = chatData.chat?.messages || []
     }
+    
+    console.log('Existing messages before adding user message:', existingMessages)
+  
+    const formattedUserMessage = {
+      id: userMessage.id || `user-${Date.now()}`,
+      role: 'user',
+      content: userMessage.text || userMessage.content || '',
+      parts: userMessage.parts || [{ type: 'text', text: userMessage.text || userMessage.content || '' }],
+      timestamp: new Date()
+    }
+
+    if (userMessage.files && userMessage.files.length > 0) {
+      const fileParts = userMessage.files.map((file: any) => ({
+        type: 'file',
+        file: {
+          type: 'file',
+          mediaType: file.mediaType,
+          name: file.filename,
+          url: file.url || file.cdnUrl,
+        }
+      }))
+      formattedUserMessage.parts = [
+        ...formattedUserMessage.parts,
+        ...fileParts
+      ]
+    }
+
+    const allMessages = [...existingMessages, formattedUserMessage]
+    
+    console.log('All messages including new user message:', allMessages)
+   
+    const response = await fetch(`/api/chats/${chatId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        messages: allMessages,
+        ...(chatTitle === 'New Chat' && {
+          title: generateTitleFromMessage(formattedUserMessage)
+        })
+      }),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to save user message: ${response.statusText}`)
+    }
+    
+    console.log('User message saved successfully')
+    
+  } catch (error) {
+    console.error('Error saving user message:', error)
+    throw error // Re-throw so the calling function can handle it
   }
+}
 
   const renderFilePreview = (file: any) => {
     if (!file) {
@@ -515,43 +544,58 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
                   )}
                 >
                   {isEditing ? (
-                    <div className="space-y-3">
-                      <textarea
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        className="max-h-[300px] min-h-[100px] w-full resize-none rounded-lg border-none bg-neutral-700 p-3 text-white focus:border-transparent focus:ring-0 focus:outline-none"
-                        rows={4}
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') {
-                            cancelEditing()
-                          } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                            saveEditedMessage(message.id)
-                          }
-                        }}
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => saveEditedMessage(message.id)}
-                          disabled={!editingText.trim() || status === 'streaming'}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="mr-1 h-3 w-3" />
-                          Save & Submit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditing}
-                          className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                        >
-                          <X className="mr-1 h-3 w-3" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
+  <div className="space-y-3">
+    <div className="relative">
+      <textarea
+        value={editingText}
+        onChange={(e) => setEditingText(e.target.value)}
+        className="w-full p-3 rounded-lg bg-neutral-700 text-white resize-none min-h-[100px] max-h-[300px] border-none focus:outline-none focus:ring-0 focus:border-transparent"
+        rows={4}
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            cancelEditing()
+          } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            saveEditedMessage(message.id)
+          }
+        }}
+        placeholder="Edit your message..."
+      />
+      <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+        Press Esc to cancel, Cmd/Ctrl+Enter to save
+      </div>
+    </div>
+    
+    <div className="bg-yellow-600/10 border border-yellow-600/20 rounded-lg p-3">
+      <div className="flex items-center gap-2 text-yellow-400 text-sm">
+        <AlertTriangle className="h-4 w-4" />
+        <span>Editing this message will delete the current AI response and generate a new one.</span>
+      </div>
+    </div>
+    
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        onClick={() => saveEditedMessage(message.id)}
+        disabled={!editingText.trim() || status === 'streaming'}
+        className="bg-green-600 hover:bg-green-700"
+      >
+        <Check className="h-3 w-3 mr-1" />
+        {status === 'streaming' ? 'Generating...' : 'Save & Regenerate'}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={cancelEditing}
+        disabled={status === 'streaming'}
+        className="text-gray-300 border-gray-600 hover:bg-gray-700"
+      >
+        <X className="h-3 w-3 mr-1" />
+        Cancel
+      </Button>
+    </div>
+  </div>
+)  : (
                     <div className="relative">
                       <div className="break-words whitespace-pre-wrap">{textParts}</div>
 
@@ -566,7 +610,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
                 </div>
 
                 {isUserMessage && !isEditing && (
-                  <div className="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -574,12 +618,17 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
                           variant="ghost"
                           onClick={() => startEditingMessage(message.id, textParts)}
                           disabled={status === 'streaming'}
-                          className="h-8 p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white"
+                          className="h-8 p-1.5 text-gray-400 hover:text-white hover:bg-gray-700"
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Edit message</TooltipContent>
+                      <TooltipContent>
+                        <div className="text-xs">
+                          <div>Edit message</div>
+                          <div className="text-gray-400">This will regenerate the AI response</div>
+                        </div>
+                      </TooltipContent>
                     </Tooltip>
                   </div>
                 )}
