@@ -1,4 +1,3 @@
-// Create this file: app/api/chats/[chatId]/messages/[messageId]/route.ts
 
 import { getAuth } from '@clerk/nextjs/server'
 import { NextRequest } from 'next/server'
@@ -18,15 +17,15 @@ export async function PATCH(
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const { chatId, messageId } = params // Removed await since params isn't a promise
+    const { chatId, messageId } = await params
     const body = await req.json()
     const { content, action = 'replace' } = body
 
     if (action === 'replace') {
-      // Replace the message and remove all messages after it
+
       const newMessage: ChatMessage = {
         id: messageId,
-        role: 'user', // This is now properly typed as 'user' | 'assistant'
+        role: 'user',
         content: content,
         parts: [{ type: 'text', text: content }],
         timestamp: new Date()
