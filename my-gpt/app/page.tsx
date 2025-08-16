@@ -1,22 +1,19 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { Sidebar } from '@/components/sidebar'
-import { Chat } from '@/components/chat'
 import { Button } from '@/components/ui/button'
 import { Menu, X } from 'lucide-react'
+import { Sidebar } from '@/components/sidebar'
+import { Chat } from '@/components/chat'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Home() {
   const { user, isLoaded, isSignedIn } = useUser()
   const [currentChatId, setCurrentChatId] = useState<string>('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [chatUpdateTrigger, setChatUpdateTrigger] = useState(0)
-
-
-  useEffect(() => {
-    console.log('current chat id -> ', currentChatId)
-  }, [currentChatId])
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const createNewChat = async () => {
     try {
@@ -38,33 +35,33 @@ export default function Home() {
     }
   }
 
-  const handleChatSelect = (chatId: string) => {
-    setCurrentChatId(chatId)
-  }
-
-  // const handleNewChat = () => {
-  //   // createNewChat()
-  // }
-
   const handleChatUpdate = () => {
     setChatUpdateTrigger(prev => prev + 1)
   }
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex h-screen bg-gray-900">
+        <div className="hidden md:block">
+          <Skeleton className="h-full w-[260px] border-r border-gray-700" />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
       </div>
     )
   }
 
   if (!isSignedIn || !user) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
+      <div className="flex items-center justify-center h-screen bg-gray-900">
+        <div className="text-center text-white max-w-md p-4">
           <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
-          <p className="text-gray-600 mb-4">You need to be signed in to use the chat with memory features.</p>
-          <Button onClick={() => window.location.href = '/sign-in'}>
+          <p className="text-gray-400 mb-4">You need to be signed in to use the chat.</p>
+          <Button 
+            onClick={() => window.location.href = '/sign-in'}
+            className="bg-green-600 hover:bg-green-700"
+          >
             Sign In
           </Button>
         </div>
@@ -73,58 +70,52 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900">
+    <div className="flex h-screen bg-neutral-800 text-gray-100 overflow-hidden">
+      <Sidebar
+        key={chatUpdateTrigger}
+        currentChatId={currentChatId}
+        onChatSelect={(id) => {
+          setCurrentChatId(id)
+          setSidebarOpen(false)
+        }}
+        onNewChat={createNewChat}
+        collapsed={sidebarCollapsed}
+        onCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+        <div
+          className="fixed inset-0 z-40 bg-black/80 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        fixed lg:relative lg:translate-x-0 z-50 lg:z-0
-        transition-transform duration-200 ease-in-out
-        h-full
-      `}>
-        <Sidebar
-          key={chatUpdateTrigger} // Force re-render when chats update
-          currentChatId={currentChatId}
-          onChatSelect={handleChatSelect}
-        />
-      </div>
-
-      <div className="flex-1 flex flex-col">
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <Button
-            variant="ghost"
-            size="sm"
+      <div className="flex-1 flex flex-col relative">
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-700">
+          <Button 
+            variant="ghost" 
+            size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-gray-300 hover:bg-gray-800"
           >
-            {sidebarOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <h1 className="text-lg font-semibold">Chat</h1>
-          <div />
+          <h1 className="text-lg font-semibold">ChatGPT</h1>
+          <div className="w-8" />
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           {currentChatId ? (
-            <Chat 
-              key={currentChatId} // Force re-render when chat changes
-              chatId={currentChatId} 
-              onChatUpdate={handleChatUpdate}
-            />
+            <Chat key={currentChatId} chatId={currentChatId} onChatUpdate={handleChatUpdate} />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold mb-4">Welcome to your AI Chat</h2>
-                <p className="text-gray-600 mb-4">Start a new conversation to begin chatting with memory-enhanced AI.</p>
-                <Button onClick={createNewChat}>
+              <div className="text-center text-gray-400 max-w-md p-4">
+                <h2 className="text-xl font-semibold mb-4">Welcome to ChatGPT</h2>
+                <p className="mb-4">Start a new conversation to begin chatting.</p>
+                <Button 
+                  onClick={createNewChat}
+                  className="bg-green-600 hover:bg-green-700"
+                >
                   Start New Chat
                 </Button>
               </div>

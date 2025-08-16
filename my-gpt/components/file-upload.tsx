@@ -1,9 +1,9 @@
-'use client'
-
+"use client"
 import { useState, useRef } from 'react'
 import { Widget } from '@uploadcare/react-widget'
 import { Button } from './ui/button'
 import { Paperclip, X } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import { cn } from '@/lib/utils'
 
 interface FileUploadProps {
@@ -48,19 +48,23 @@ export function FileUpload({ onFilesChange, className, disabled }: FileUploadPro
   }
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => widgetRef.current?.openDialog()}
-          disabled={disabled}
-        >
-          <Paperclip className="h-4 w-4" />
-          <span className="sr-only">Attach files</span>
-        </Button>
-
+    <div className={cn('flex items-center gap-1', className)}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => widgetRef.current?.openDialog()}
+            disabled={disabled}
+            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Attach files</TooltipContent>
+      </Tooltip>
+ 
         <Widget
           ref={widgetRef}
           publicKey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY || 'demopublickey'}
@@ -73,26 +77,25 @@ export function FileUpload({ onFilesChange, className, disabled }: FileUploadPro
           systemDialog
           inputAcceptTypes="image/*,.pdf,.doc,.docx,.txt"
         />
-      </div>
+      {/* </div> */}
 
       {files.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-1">
           {files.map((file) => (
             <div
               key={file.uuid}
-              className="flex items-center gap-2 rounded-md border p-2 text-sm"
+              className="flex items-center gap-1 rounded-md bg-gray-700 px-2 py-1 text-xs"
             >
-              <span className="truncate max-w-[120px]">{file.name}</span>
+              <span className="truncate max-w-[80px] text-gray-300">{file.name}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4"
+                className="h-4 w-4 text-gray-400 hover:text-white"
                 onClick={() => removeFile(file.uuid)}
                 disabled={disabled}
               >
                 <X className="h-3 w-3" />
-                <span className="sr-only">Remove file</span>
               </Button>
             </div>
           ))}

@@ -1,8 +1,12 @@
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { ClerkProvider } from '@clerk/nextjs'
+import type { Metadata } from "next"
+import { ClerkProvider } from "@clerk/nextjs"
+import "./globals.css"
+import { cn } from "@/lib/utils"
 
-const inter = Inter({ subsets: ['latin'] })
+export const metadata: Metadata = {
+  title: "ChatGPT Clone",
+  description: "A ChatGPT UI clone",
+}
 
 export default function RootLayout({
   children,
@@ -11,8 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body className={inter.className}>
+      <html lang="en" className="h-full bg-gray-900">
+        <body className={cn(
+          "h-full w-full antialiased text-gray-100 bg-gray-900",
+          "flex flex-col"
+        )}>
           {children}
         </body>
       </html>

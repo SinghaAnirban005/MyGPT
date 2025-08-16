@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
 
     const { messages, chatId } = await req.json()
 
+    console.log(messages)
+
     console.log('Received messages for user:', userId, messages.length)
     // console.log('CHAT ID ->', chatId)
     // Ensure chat exists in MongoDB, create if it doesn't
@@ -48,29 +50,70 @@ export async function POST(req: NextRequest) {
 
     const memoryManager = getMemoryManager(userId)
 
-    const modelMessages = messages.map((message: any) => {
-      let content: any = []
+    // const modelMessages = messages.map((message: any) => {
+    //   let content: any = []
       
-      if (Array.isArray(message.parts)) {
-        for (const part of message.parts) {
-          if (part.type === 'text' && part.text) {
-            content.push({ type: 'text', text: part.text })
-          } else if (part.type === 'file' && part.mediaType?.startsWith('image/')) {
-            content.push({ type: 'image', image: part.url || part.cdnUrl })
-          }
-        }
-      }
+    //   if (Array.isArray(message.parts)) {
+    //     for (const part of message.parts) {
+    //       if (part.type === 'text' && part.text) {
+    //         content.push({ type: 'text', text: part.text })
+    //       } else if (part.type === 'file' && part.mediaType?.startsWith('image/')) {
+    //         content.push({ type: 'image', image: part.url || part.cdnUrl })
+    //       }
+    //     }
+    //   }
 
-      if (content.length === 0) {
-        content = message.content || [{ type: 'text', text: '' }]
-      }
+    //   if (content.length === 0) {
+    //     content = message.content || [{ type: 'text', text: '' }]
+    //   }
 
-      if (content.length === 1 && content[0].type === 'text') {
-        content = content[0].text
-      }
+    //   if (content.length === 1 && content[0].type === 'text') {
+    //     content = content[0].text
+    //   }
 
-      return { role: message.role, content }
-    })
+    //   return { role: message.role, content }
+    // })
+
+    const modelMessages = messages.map((message: any) => {
+  let content: any = []
+  
+  // Handle the new structure from useChat
+  if (message.content && typeof message.content === 'string') {
+    content.push({ type: 'text', text: message.content })
+  }
+  
+  // Handle files from the useChat hook
+  if (message.files && Array.isArray(message.files)) {
+    for (const file of message.files) {
+      if (file.type === 'file' && file.mediaType?.startsWith('image/')) {
+        content.push({ type: 'image', image: file.url })
+      }
+    }
+  }
+  
+  // Fallback for old format (parts-based)
+  if (Array.isArray(message.parts)) {
+    for (const part of message.parts) {
+      if (part.type === 'text' && part.text) {
+        content.push({ type: 'text', text: part.text })
+      } else if (part.type === 'file' && part.mediaType?.startsWith('image/')) {
+        content.push({ type: 'image', image: part.url || part.cdnUrl })
+      }
+    }
+  }
+
+  // If no content was found, use fallback
+  if (content.length === 0) {
+    content = message.content || [{ type: 'text', text: '' }]
+  }
+
+  // If only one text content, simplify to string
+  if (content.length === 1 && content[0].type === 'text') {
+    content = content[0].text
+  }
+
+  return { role: message.role, content }
+})
 
     const contextManagedMessages = memoryManager.manageContextWindow(modelMessages)
 
