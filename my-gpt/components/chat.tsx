@@ -4,16 +4,15 @@ import React, { useState, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useUser, useAuth } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, Edit, Check, X, Paperclip } from 'lucide-react'
-import { FileData } from '@/components/file-upload'
-import { AdvancedImage } from "@cloudinary/react"
+import { ArrowUp, Edit, Check, X, Paperclip, Download, Eye } from 'lucide-react'
+import { FileData } from '@/lib/file-data'
 import { Cloudinary } from '@cloudinary/url-gen'
-import { fill } from '@cloudinary/url-gen/actions/resize'
 import { Skeleton } from './ui/skeleton'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
 import { InputOptions } from './input-options'
 import { cn } from '@/lib/utils'
 import { FileText } from 'lucide-react'
+import { getFileType, getFileIcon, getFileColor, formatFileSize } from './file-utilities'
 
 
 const cld = new Cloudinary({
@@ -301,44 +300,193 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
   }
 }
 
+
 const renderFilePreview = (file: any) => {
-  
   if (!file) {
     return null
   }
 
-  const mediaType = file.mediaType || file.mimeType
-  const url = file.url || file.cdnUrl
-  const name = file.filename || file.name
+  const mediaType = file.mediaType || file.mimeType || ''
+  const url = file.url || file.cdnUrl || ''
+  const name = file.filename || file.name || 'Unknown file'
+  const size = file.size || 0
+  const fileType = getFileType(mediaType)
 
-  if (mediaType && mediaType.startsWith('image/')) {
+  // Image preview (existing functionality)
+  if (fileType === 'image') {
     return (
-      <div className="mt-2 rounded-lg overflow-hidden">
+      <div className="mt-2 rounded-lg overflow-hidden max-w-md">
         <img 
-          src={url || ""} 
-          alt={name || "Image"} 
+          src={url} 
+          alt={name} 
           className="max-w-full max-h-[300px] object-contain rounded-lg"
+          onError={(e) => {
+            // Fallback to file card if image fails to load
+            e.currentTarget.style.display = 'none'
+            const nextElement = e.currentTarget.nextElementSibling as HTMLElement
+            if (nextElement) {
+              nextElement.classList.remove('hidden')
+            }
+          }}
         />
+        <div className="hidden">
+          {renderFileCard(fileType, name, url, size, mediaType)}
+        </div>
       </div>
     )
   }
+
+  // Video preview
+  if (fileType === 'video') {
+    return (
+      <div className="mt-2 rounded-lg overflow-hidden max-w-md">
+        <video 
+          controls 
+          className="max-w-full max-h-[300px] rounded-lg"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+            const nextElement = e.currentTarget.nextElementSibling as HTMLElement
+            if (nextElement) {
+              nextElement.classList.remove('hidden')
+            }
+          }}
+        >
+          <source src={url} type={mediaType} />
+          Your browser does not support the video tag.
+        </video>
+        <div className="hidden">
+          {renderFileCard(fileType, name, url, size, mediaType)}
+        </div>
+      </div>
+    )
+  }
+
+  // Audio preview
+  if (fileType === 'audio') {
+    return (
+      <div className="mt-2 max-w-md">
+        <audio 
+          controls 
+          className="w-full rounded-lg"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+            const nextElement = e.currentTarget.nextElementSibling as HTMLElement
+            if (nextElement) {
+              nextElement.classList.remove('hidden')
+            }
+          }}
+        >
+          <source src={url} type={mediaType} />
+          Your browser does not support the audio tag.
+        </audio>
+        <div className="hidden">
+          {renderFileCard(fileType, name, url, size, mediaType)}
+        </div>
+      </div>
+    )
+  }
+
+  // All other file types (PDF, documents, etc.)
+  return renderFileCard(fileType, name, url, size, mediaType)
+}
+
+// File card component for non-media files
+const renderFileCard = (fileType: string, name: string, url: string, size: number, mediaType: string) => {
+  const colorClasses = getFileColor(fileType)
   
   return (
-    <div className="mt-2 p-3 rounded-md bg-gray-800 max-w-[300px]">
-      <div className="flex items-center gap-2">
-        <Paperclip className="h-4 w-4 flex-shrink-0" />
-        <a 
-          href={url || ""} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-sm text-blue-400 hover:underline truncate"
-        >
-          {name || "File"}
-        </a>
+    <div className={`mt-2 p-4 rounded-lg border-2 max-w-md ${colorClasses}`}>
+      <div className="flex items-start gap-3">
+        {getFileIcon(fileType, 'h-8 w-8')}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="text-sm font-medium text-white truncate" title={name}>
+              {name}
+            </h4>
+          </div>
+          
+          <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+            <span className="uppercase">{fileType}</span>
+            {size > 0 && (
+              <>
+                <span>•</span>
+                <span>{formatFileSize(size)}</span>
+              </>
+            )}
+            {mediaType && (
+              <>
+                <span>•</span>
+                <span className="truncate">{mediaType.split('/')[1]?.toUpperCase()}</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {/* View/Open button */}
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-neutral-700 hover:bg-neutral-600 rounded text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              <Eye className="h-3 w-3" />
+              View
+            </a>
+            
+            {/* Download button */}
+            <a
+              href={url}
+              download={name}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-neutral-700 hover:bg-neutral-600 rounded text-gray-300 hover:text-white transition-colors"
+            >
+              <Download className="h-3 w-3" />
+              Download
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
+
+// const renderFilePreview = (file: any) => {
+  
+//   if (!file) {
+//     return null
+//   }
+
+//   const mediaType = file.mediaType || file.mimeType
+//   const url = file.url || file.cdnUrl
+//   const name = file.filename || file.name
+
+//   if (mediaType && mediaType.startsWith('image/')) {
+//     return (
+//       <div className="mt-2 rounded-lg overflow-hidden">
+//         <img 
+//           src={url || ""} 
+//           alt={name || "Image"} 
+//           className="max-w-full max-h-[300px] object-contain rounded-lg"
+//         />
+//       </div>
+//     )
+//   }
+  
+//   return (
+//     <div className="mt-2 p-3 rounded-md bg-gray-800 max-w-[300px]">
+//       <div className="flex items-center gap-2">
+//         <Paperclip className="h-4 w-4 flex-shrink-0" />
+//         <a 
+//           href={url || ""} 
+//           target="_blank" 
+//           rel="noopener noreferrer"
+//           className="text-sm text-blue-400 hover:underline truncate"
+//         >
+//           {name || "File"}
+//         </a>
+//       </div>
+//     </div>
+//   )
+// }
 
     if (!isLoaded || loadingChat) {
     return (
@@ -511,33 +659,53 @@ return (
       </div>
 
       {attachedFiles.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {attachedFiles.map((file, index) => (
-            <div key={index} className="relative">
-              {file.mimeType.startsWith('image/') ? (
-                <img
-                  src={file.url}
-                  alt={file.name}
-                  className="h-16 w-16 object-cover rounded-md"
-                />
-              ) : (
-                <div className="h-16 w-16 bg-gray-700 rounded-md flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-gray-400" />
-                </div>
-              )}
+  <div className="mb-2 flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+    {attachedFiles.map((file, index) => {
+      const fileType = getFileType(file.mimeType)
+      
+      return (
+        <div key={index} className="relative group">
+          {fileType === 'image' ? (
+            <div className="relative">
+              <img
+                src={file.url || file.cdnUrl}
+                alt={file.name}
+                className="h-16 w-16 object-cover rounded-md border-2 border-gray-600"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-md flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAttachedFiles(prev => prev.filter((_, i) => i !== index))
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 rounded-full p-1"
+                >
+                  <X className="h-3 w-3 text-white" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={`h-16 w-20 rounded-md border-2 ${getFileColor(fileType)} flex flex-col items-center justify-center p-1 relative group-hover:bg-opacity-20 transition-all`}>
+              {getFileIcon(fileType, 'h-5 w-5')}
+              <span className="text-xs text-gray-300 truncate w-full text-center mt-1" title={file.name}>
+                {file.name.length > 8 ? file.name.substring(0, 6) + '...' : file.name}
+              </span>
               <button
                 type="button"
                 onClick={() => {
                   setAttachedFiles(prev => prev.filter((_, i) => i !== index))
                 }}
-                className="absolute -top-2 -right-2 bg-gray-800 rounded-full p-1"
+                className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 rounded-full p-1"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3 text-white" />
               </button>
             </div>
-          ))}
+          )}
         </div>
-      )}
+      )
+    })}
+  </div>
+)}
 
       <textarea
         rows={1}

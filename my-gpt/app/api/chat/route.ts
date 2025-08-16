@@ -4,6 +4,7 @@ import { getAuth } from '@clerk/nextjs/server'
 import { NextRequest } from 'next/server'
 import { ChatMemoryManager } from '@/lib/memory'
 import { ChatService } from '@/lib/chatService'
+import { getFileTypeDescription } from '@/lib/helper'
 
 // export const runtime = 'edge'
 
@@ -29,75 +30,58 @@ export async function POST(req: NextRequest) {
 
     const { messages, chatId } = await req.json()
 
-    console.log(messages)
-
-    console.log('Received messages for user:', userId, messages.length)
-    // console.log('CHAT ID ->', chatId)
-    // Ensure chat exists in MongoDB, create if it doesn't
-    // let chat = await chatService.getChatById(chatId, userId)
-    // console.log('CHAT -> ', chat)
-    // if (!chat) {
-    //   // Generate title from first user message
-    //   const firstUserMessage = messages.find((msg: any) => msg.role === 'user')
-    //   const title = firstUserMessage 
-    //     ? await chatService.generateChatTitle([firstUserMessage])
-    //     : 'New Chat'
-      
-    //   chat = await chatService.createChat(userId, title)
-    // }
-
-    console.log('chatId ----> ', chatId)
-
     const memoryManager = getMemoryManager(userId)
 
-    // const modelMessages = messages.map((message: any) => {
-    //   let content: any = []
-      
-    //   if (Array.isArray(message.parts)) {
-    //     for (const part of message.parts) {
-    //       if (part.type === 'text' && part.text) {
-    //         content.push({ type: 'text', text: part.text })
-    //       } else if (part.type === 'file' && part.mediaType?.startsWith('image/')) {
-    //         content.push({ type: 'image', image: part.url || part.cdnUrl })
-    //       }
-    //     }
-    //   }
 
-    //   if (content.length === 0) {
-    //     content = message.content || [{ type: 'text', text: '' }]
-    //   }
-
-    //   if (content.length === 1 && content[0].type === 'text') {
-    //     content = content[0].text
-    //   }
-
-    //   return { role: message.role, content }
-    // })
-
-    const modelMessages = messages.map((message: any) => {
+const modelMessages = messages.map((message: any) => {
   let content: any = []
   
-  // Handle the new structure from useChat
   if (message.content && typeof message.content === 'string') {
     content.push({ type: 'text', text: message.content })
   }
   
-  // Handle files from the useChat hook
   if (message.files && Array.isArray(message.files)) {
     for (const file of message.files) {
-      if (file.type === 'file' && file.mediaType?.startsWith('image/')) {
-        content.push({ type: 'image', image: file.url })
+      if (file.type === 'file') {
+        const mediaType = file.mediaType || ''
+        
+        // Handle images (send as visual content)
+        if (mediaType.startsWith('image/')) {
+          content.push({ type: 'image', image: file.url })
+        }
+        // For other file types, include them as text context
+        else {
+          const fileName = file.filename || 'uploaded file'
+          const fileType = getFileTypeDescription(mediaType)
+          
+          content.push({ 
+            type: 'text', 
+            text: `[File attached: ${fileName} (${fileType}). User has uploaded this file and may want to discuss or analyze its contents.]`
+          })
+        }
       }
     }
   }
   
-  // Fallback for old format (parts-based)
   if (Array.isArray(message.parts)) {
     for (const part of message.parts) {
       if (part.type === 'text' && part.text) {
         content.push({ type: 'text', text: part.text })
-      } else if (part.type === 'file' && part.mediaType?.startsWith('image/')) {
-        content.push({ type: 'image', image: part.url || part.cdnUrl })
+      } else if (part.type === 'file') {
+        const file = part.file || part
+        const mediaType = file.mediaType || file.mimeType || ''
+        
+        if (mediaType.startsWith('image/')) {
+          content.push({ type: 'image', image: file.url || file.cdnUrl })
+        } else {
+          const fileName = file.filename || file.name || 'uploaded file'
+          const fileType = getFileTypeDescription(mediaType)
+          
+          content.push({ 
+            type: 'text', 
+            text: `[File attached: ${fileName} (${fileType}). User has uploaded this file and may want to discuss or analyze its contents.]`
+          })
+        }
       }
     }
   }
@@ -149,15 +133,12 @@ export async function POST(req: NextRequest) {
       temperature: 0.7,
     })
 
-    // Store conversation in both memory and MongoDB after response
     setTimeout(async () => {
       try {
         // Store in mem0 for memory
         await memoryManager.storeMemory(modelMessages, chatId)
         console.log('Conversation stored in memory for user:', userId)
         
-        // The messages will be saved to MongoDB by the client-side Chat component
-        // when it receives the response through the onFinish callback
         
       } catch (error) {
         console.error('Failed to store memory:', error)
