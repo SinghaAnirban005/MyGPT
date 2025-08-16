@@ -36,7 +36,7 @@ A pixel-perfect, full-stack clone of ChatGPT with memory, file uploads, and mess
 ### Prerequisites
 - Node.js 18+
 - MongoDB Atlas account
-- Cloudinary & Uploadcare accounts
+- Uploadcare account
 - Clerk setup
 
 ### Installation
