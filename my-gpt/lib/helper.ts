@@ -1,13 +1,21 @@
 export function getFileTypeDescription(mediaType: string): string {
   if (mediaType.includes('pdf')) return 'PDF Document'
-  if (mediaType.includes('document') || mediaType.includes('officedocument.wordprocessingml')) return 'Word Document'
-  if (mediaType.includes('sheet') || mediaType.includes('excel') || mediaType.includes('spreadsheetml')) return 'Excel Spreadsheet'
-  if (mediaType.includes('presentation') || mediaType.includes('presentationml')) return 'PowerPoint Presentation'
+  if (mediaType.includes('document') || mediaType.includes('officedocument.wordprocessingml'))
+    return 'Word Document'
+  if (
+    mediaType.includes('sheet') ||
+    mediaType.includes('excel') ||
+    mediaType.includes('spreadsheetml')
+  )
+    return 'Excel Spreadsheet'
+  if (mediaType.includes('presentation') || mediaType.includes('presentationml'))
+    return 'PowerPoint Presentation'
   if (mediaType.startsWith('text/')) return 'Text File'
   if (mediaType.includes('csv')) return 'CSV File'
   if (mediaType.startsWith('video/')) return 'Video File'
   if (mediaType.startsWith('audio/')) return 'Audio File'
-  if (mediaType.includes('zip') || mediaType.includes('rar') || mediaType.includes('archive')) return 'Archive File'
+  if (mediaType.includes('zip') || mediaType.includes('rar') || mediaType.includes('archive'))
+    return 'Archive File'
   if (mediaType.includes('json')) return 'JSON File'
   if (mediaType.includes('javascript')) return 'JavaScript File'
   if (mediaType.includes('html')) return 'HTML File'

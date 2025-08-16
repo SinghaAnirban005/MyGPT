@@ -36,12 +36,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { chatId: st
     }
 
     const { title, messages } = await req.json()
-     const { chatId } = await params
-    
+    const { chatId } = await params
+
     if (title !== undefined) {
       await chatService.updateChatTitle(chatId, title, userId)
     }
-    
+
     if (messages !== undefined) {
       await chatService.updateChatMessages(chatId, messages, userId)
     }

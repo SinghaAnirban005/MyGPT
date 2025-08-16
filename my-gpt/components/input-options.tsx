@@ -1,8 +1,23 @@
 'use client'
-import { Button } from "@/components/ui/button"
-import { Plus, Image as ImageIcon, FileText, Search, Settings, Video, Music, Archive } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
-import { useRef } from "react"
+import { Button } from '@/components/ui/button'
+import {
+  Plus,
+  Image as ImageIcon,
+  FileText,
+  Search,
+  Settings,
+  Video,
+  Music,
+  Archive,
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import { useRef } from 'react'
 import { uploadFile } from '@uploadcare/upload-client'
 
 interface InputOptionsProps {
@@ -20,14 +35,12 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
     if (!file) return
 
     try {
-      console.log('Uploading file:', file.name, file.type, file.size)
-      
       const result = await uploadFile(file, {
         publicKey: process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY || 'demopublickey',
         store: 'auto',
         metadata: {
-          originalName: file.name
-        }
+          originalName: file.name,
+        },
       })
 
       const fileData = {
@@ -36,15 +49,14 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
         cdnUrl: result.cdnUrl,
         mimeType: file.type,
         size: file.size,
-        uuid: result.uuid
+        uuid: result.uuid,
       }
 
-      console.log('File uploaded successfully:', fileData)
       onFileUpload(fileData)
       event.target.value = ''
     } catch (error) {
       console.error('Upload failed:', error)
-      // You can add toast notification here if you have one
+
       alert('File upload failed. Please try again.')
     }
   }
@@ -56,53 +68,56 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+            className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-500 hover:text-white"
           >
             <Plus className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-48 bg-neutral-700 text-white border-gray-700">
+        <DropdownMenuContent
+          align="start"
+          className="w-48 border-gray-700 bg-neutral-700 text-white"
+        >
           <DropdownMenuItem
-            className="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
+            className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => imageInputRef.current?.click()}
           >
-            <ImageIcon className="h-4 w-4 mr-2" />
+            <ImageIcon className="mr-2 h-4 w-4" />
             Images
           </DropdownMenuItem>
-          
+
           <DropdownMenuItem
-            className="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
+            className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => documentInputRef.current?.click()}
           >
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="mr-2 h-4 w-4" />
             Documents
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            className="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
+            className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => mediaInputRef.current?.click()}
           >
-            <Video className="h-4 w-4 mr-2" />
+            <Video className="mr-2 h-4 w-4" />
             Media Files
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            className="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
+            className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => archiveInputRef.current?.click()}
           >
-            <Archive className="h-4 w-4 mr-2" />
+            <Archive className="mr-2 h-4 w-4" />
             Archives
           </DropdownMenuItem>
 
           <DropdownMenuSeparator className="bg-gray-600" />
-          
-          <DropdownMenuItem className="hover:bg-gray-700 focus:bg-gray-700">
-            <Search className="h-4 w-4 mr-2" />
+
+          <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
+            <Search className="mr-2 h-4 w-4" />
             Search web
           </DropdownMenuItem>
-          
-          <DropdownMenuItem className="hover:bg-gray-700 focus:bg-gray-700">
-            <Settings className="h-4 w-4 mr-2" />
+
+          <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
+            <Settings className="mr-2 h-4 w-4" />
             Custom instructions
           </DropdownMenuItem>
         </DropdownMenuContent>

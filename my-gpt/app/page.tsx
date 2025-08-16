@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
@@ -24,11 +24,11 @@ export default function Home() {
         },
         body: JSON.stringify({ title: 'New Chat' }),
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setCurrentChatId(data.chat.id)
-        setChatUpdateTrigger(prev => prev + 1)
+        setChatUpdateTrigger((prev) => prev + 1)
       }
     } catch (error) {
       console.error('Error creating new chat:', error)
@@ -36,7 +36,7 @@ export default function Home() {
   }
 
   const handleChatUpdate = () => {
-    setChatUpdateTrigger(prev => prev + 1)
+    setChatUpdateTrigger((prev) => prev + 1)
   }
 
   if (!isLoaded) {
@@ -45,7 +45,7 @@ export default function Home() {
         <div className="hidden md:block">
           <Skeleton className="h-full w-[260px] border-r border-gray-700" />
         </div>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-1 items-center justify-center">
           <Skeleton className="h-8 w-8 rounded-full" />
         </div>
       </div>
@@ -54,12 +54,12 @@ export default function Home() {
 
   if (!isSignedIn || !user) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-900">
-        <div className="text-center text-white max-w-md p-4">
-          <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
-          <p className="text-gray-400 mb-4">You need to be signed in to use the chat.</p>
-          <Button 
-            onClick={() => window.location.href = '/sign-in'}
+      <div className="flex h-screen items-center justify-center bg-gray-900">
+        <div className="max-w-md p-4 text-center text-white">
+          <h2 className="mb-2 text-xl font-semibold">Please Sign In</h2>
+          <p className="mb-4 text-gray-400">You need to be signed in to use the chat.</p>
+          <Button
+            onClick={() => (window.location.href = '/sign-in')}
             className="bg-green-600 hover:bg-green-700"
           >
             Sign In
@@ -70,7 +70,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-neutral-800 text-gray-100 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-neutral-800 text-gray-100">
       <Sidebar
         key={chatUpdateTrigger}
         currentChatId={currentChatId}
@@ -90,10 +90,10 @@ export default function Home() {
         />
       )}
 
-      <div className="flex-1 flex flex-col relative">
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-700">
-          <Button 
-            variant="ghost" 
+      <div className="relative flex flex-1 flex-col">
+        <div className="flex items-center justify-between border-b border-gray-700 p-4 lg:hidden">
+          <Button
+            variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-gray-300 hover:bg-gray-800"
@@ -108,14 +108,11 @@ export default function Home() {
           {currentChatId ? (
             <Chat key={currentChatId} chatId={currentChatId} onChatUpdate={handleChatUpdate} />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-gray-400 max-w-md p-4">
-                <h2 className="text-xl font-semibold mb-4">Welcome to ChatGPT</h2>
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-md p-4 text-center text-gray-400">
+                <h2 className="mb-4 text-xl font-semibold">Welcome to ChatGPT</h2>
                 <p className="mb-4">Start a new conversation to begin chatting.</p>
-                <Button 
-                  onClick={createNewChat}
-                  className="bg-green-600 hover:bg-green-700"
-                >
+                <Button onClick={createNewChat} className="bg-green-600 hover:bg-green-700">
                   Start New Chat
                 </Button>
               </div>
