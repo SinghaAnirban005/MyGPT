@@ -13,7 +13,6 @@ interface RouteParams {
   }
 }
 
-
 // Edit/Replace a specific message
 export async function PATCH(
   req: NextRequest,
@@ -60,25 +59,15 @@ export async function PATCH(
 }
 
 // Delete a specific message and all after it
-export async function DELETE(
-  req: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse> {
+export async function DELETE(req: NextRequest, { params }: RouteParams): Promise<NextResponse> {
   try {
     const { userId } = getAuth(req)
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { chatId, messageId } = params
-    const updatedMessages = await chatService.removeMessagesFrom(
-      chatId,
-      messageId,
-      userId
-    )
+    const updatedMessages = await chatService.removeMessagesFrom(chatId, messageId, userId)
 
     return NextResponse.json({
       success: true,
@@ -87,9 +76,6 @@ export async function DELETE(
     })
   } catch (error) {
     console.error('Error deleting message:', error)
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

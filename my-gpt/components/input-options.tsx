@@ -1,15 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import {
-  Plus,
-  Image as ImageIcon,
-  FileText,
-  Search,
-  Settings,
-  Video,
-  Music,
-  Archive,
-} from 'lucide-react'
+import { Plus, Image as ImageIcon, FileText, Search, Settings, Video, Archive } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,

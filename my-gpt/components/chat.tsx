@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useChat } from '@ai-sdk/react'
-import { useUser, useAuth } from '@clerk/nextjs'
+import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, Edit, Check, X, Download, Eye, AlertTriangle } from 'lucide-react'
+import { ArrowUp, Edit, X, Download, Eye } from 'lucide-react'
 import { FileData } from '@/lib/file-data'
 import { Skeleton } from './ui/skeleton'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
@@ -18,6 +18,8 @@ interface ChatProps {
 }
 
 export function Chat({ chatId, onChatUpdate }: ChatProps) {
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user, isLoaded, isSignedIn } = useUser()
   const [input, setInput] = useState('')
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
@@ -59,6 +61,15 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
     }
   }, [chatId, isSignedIn])
 
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
+    }
+  }, [messages, status])
+
   const loadChat = async () => {
     try {
       setLoadingChat(true)
@@ -76,6 +87,12 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
         }))
 
         setMessages(convertedMessages)
+
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+          }
+        }, 100)
       } else if (response.status === 404) {
         console.warn('Chat not found:', chatId)
       }
@@ -547,7 +564,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
 
   return (
     <div className="flex h-full flex-col bg-neutral-800">
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-3xl space-y-6">
           {messages.map((message, index) => {
             const textParts =
@@ -688,6 +705,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
               </div>
             )
           })}
+          <div ref={messagesEndRef} />
 
           {status === 'streaming' && (
             <div className="flex justify-start">

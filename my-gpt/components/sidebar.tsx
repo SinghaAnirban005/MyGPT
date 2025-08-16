@@ -3,15 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useUser, useAuth } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import {
-  Edit,
-  MessageSquare,
-  PanelLeft,
-  PanelRight,
-  LogOut,
-  SearchCheck,
-  Image,
-} from 'lucide-react'
+import { Edit, MessageSquare, PanelLeft, LogOut, SearchCheck, Image } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
