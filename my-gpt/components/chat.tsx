@@ -27,31 +27,31 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
   const [chatTitle, setChatTitle] = useState<string>('')
   const [loadingChat, setLoadingChat] = useState(true)
 
-const { messages, sendMessage, status, setMessages } = useChat({
-  onFinish: async (message: any) => {
-    const updatedMessages = await saveAssistantMessage(message)
-    
-    // Now sync the real IDs from database to the local state
-    if (updatedMessages) {
-      const convertedMessages = updatedMessages.map((msg: any) => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        parts: msg.parts || [{ type: 'text', text: msg.content }],
-      }))
-      setMessages(convertedMessages)
-    }
+  const { messages, sendMessage, status, setMessages } = useChat({
+    onFinish: async (message: any) => {
+      const updatedMessages = await saveAssistantMessage(message)
 
-    onChatUpdate?.()
-  },
+      // Now sync the real IDs from database to the local state
+      if (updatedMessages) {
+        const convertedMessages = updatedMessages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          parts: msg.parts || [{ type: 'text', text: msg.content }],
+        }))
+        setMessages(convertedMessages)
+      }
 
-  onError: (error: any) => {
-    console.error('Chat error:', error)
-    if (error.message.includes('Unauthorized')) {
-      window.location.href = '/sign-in'
-    }
-  },
-})
+      onChatUpdate?.()
+    },
+
+    onError: (error: any) => {
+      console.error('Chat error:', error)
+      if (error.message.includes('Unauthorized')) {
+        window.location.href = '/sign-in'
+      }
+    },
+  })
 
   useEffect(() => {
     if (chatId && isSignedIn) {
@@ -86,158 +86,156 @@ const { messages, sendMessage, status, setMessages } = useChat({
     }
   }
 
-
   useEffect(() => {
-  // This will run whenever messages change
-  // We need to sync any user messages that might have temporary IDs
-  const syncMessageIds = async () => {
-    if (messages.length === 0) return
-    
-    const lastMessage = messages[messages.length - 1]
-    
-    // Check if the last message is a user message with a temporary ID
-    if (lastMessage.role === 'user' && lastMessage.id.startsWith('user-')) {
-      try {
+    // This will run whenever messages change
+    // We need to sync any user messages that might have temporary IDs
+    const syncMessageIds = async () => {
+      if (messages.length === 0) return
 
-        const response = await fetch(`/api/chats/${chatId}`)
-        if (response.ok) {
-          const data = await response.json()
-          const dbMessages = data.chat?.messages || []
-          
-          if (dbMessages.length > 0) {
-            // Update messages with real IDs from database
-            const convertedMessages = dbMessages.map((msg: any) => ({
-              id: msg.id,
-              role: msg.role,
-              content: msg.content,
-              parts: msg.parts || [{ type: 'text', text: msg.content }],
-            }))
-            setMessages(convertedMessages)
+      const lastMessage = messages[messages.length - 1]
+
+      // Check if the last message is a user message with a temporary ID
+      if (lastMessage.role === 'user' && lastMessage.id.startsWith('user-')) {
+        try {
+          const response = await fetch(`/api/chats/${chatId}`)
+          if (response.ok) {
+            const data = await response.json()
+            const dbMessages = data.chat?.messages || []
+
+            if (dbMessages.length > 0) {
+              // Update messages with real IDs from database
+              const convertedMessages = dbMessages.map((msg: any) => ({
+                id: msg.id,
+                role: msg.role,
+                content: msg.content,
+                parts: msg.parts || [{ type: 'text', text: msg.content }],
+              }))
+              setMessages(convertedMessages)
+            }
           }
+        } catch (error) {
+          console.error('Error syncing message IDs:', error)
         }
-      } catch (error) {
-        console.error('Error syncing message IDs:', error)
       }
     }
-  }
 
-  // Only sync if we have messages and the last one might need ID syncing
-  if (messages.length > 0) {
-    const timeoutId = setTimeout(syncMessageIds, 100)
-    return () => clearTimeout(timeoutId)
-  }
-}, [messages.length, chatId]) 
-
-const saveAssistantMessage = async (assistantMessage: any) => {
-  try {
-    console.log('Saving assistant message')
-    console.log('Assistant message to save:', assistantMessage)
-
-    const existingResponse = await fetch(`/api/chats/${chatId}`)
-    let existingMessages = []
-
-    if (existingResponse.ok) {
-      const chatData = await existingResponse.json()
-      existingMessages = chatData.chat?.messages || []
+    // Only sync if we have messages and the last one might need ID syncing
+    if (messages.length > 0) {
+      const timeoutId = setTimeout(syncMessageIds, 100)
+      return () => clearTimeout(timeoutId)
     }
+  }, [messages.length, chatId])
 
-    console.log('Existing messages before adding assistant message:', existingMessages)
+  const saveAssistantMessage = async (assistantMessage: any) => {
+    try {
+      console.log('Saving assistant message')
+      console.log('Assistant message to save:', assistantMessage)
 
-    const messageObj = assistantMessage.message || assistantMessage
+      const existingResponse = await fetch(`/api/chats/${chatId}`)
+      let existingMessages = []
 
-    const formattedAssistantMessage = {
-      id: messageObj.id,
-      role: messageObj.role,
-      content: Array.isArray(messageObj.parts)
-        ? messageObj.parts
-            .filter((p: any) => p.type === 'text' && p.text)
-            .map((p: any) => p.text)
-            .join('') || ''
-        : typeof messageObj.content === 'string'
-          ? messageObj.content
-          : '',
-      parts: messageObj.parts || [{ type: 'text', text: messageObj.content }],
-      timestamp: new Date(),
+      if (existingResponse.ok) {
+        const chatData = await existingResponse.json()
+        existingMessages = chatData.chat?.messages || []
+      }
+
+      console.log('Existing messages before adding assistant message:', existingMessages)
+
+      const messageObj = assistantMessage.message || assistantMessage
+
+      const formattedAssistantMessage = {
+        id: messageObj.id,
+        role: messageObj.role,
+        content: Array.isArray(messageObj.parts)
+          ? messageObj.parts
+              .filter((p: any) => p.type === 'text' && p.text)
+              .map((p: any) => p.text)
+              .join('') || ''
+          : typeof messageObj.content === 'string'
+            ? messageObj.content
+            : '',
+        parts: messageObj.parts || [{ type: 'text', text: messageObj.content }],
+        timestamp: new Date(),
+      }
+
+      const allMessages = [...existingMessages, formattedAssistantMessage]
+
+      console.log('All messages including new assistant message:', allMessages)
+
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: allMessages,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to save assistant message: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('Assistant message saved successfully')
+
+      // Return the updated messages with actual IDs
+      return result.messages || allMessages
+    } catch (error) {
+      console.error('Error saving assistant message:', error)
+      throw error
     }
-
-    const allMessages = [...existingMessages, formattedAssistantMessage]
-
-    console.log('All messages including new assistant message:', allMessages)
-
-    const response = await fetch(`/api/chats/${chatId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages: allMessages,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to save assistant message: ${response.statusText}`)
-    }
-
-    const result = await response.json()
-    console.log('Assistant message saved successfully')
-    
-    // Return the updated messages with actual IDs
-    return result.messages || allMessages
-
-  } catch (error) {
-    console.error('Error saving assistant message:', error)
-    throw error
   }
-}
 
   const generateTitleFromMessage = (message: any) => {
     const content = message.content || ''
     return content.length > 50 ? content.substring(0, 50) + '...' : content || 'New Chat'
   }
 
-const onSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  const text = input.trim()
-  if ((!text && attachedFiles.length === 0) || status === 'streaming') return
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const text = input.trim()
+    if ((!text && attachedFiles.length === 0) || status === 'streaming') return
 
-  setInput('')
-  const currentFiles = [...attachedFiles]
-  setAttachedFiles([])
+    setInput('')
+    const currentFiles = [...attachedFiles]
+    setAttachedFiles([])
 
-  try {
-    const userMessageData = {
-      text: text,
-      files: currentFiles.length > 0
-        ? currentFiles.map((file) => ({
-            type: 'file',
+    try {
+      const userMessageData = {
+        text: text,
+        files:
+          currentFiles.length > 0
+            ? currentFiles.map((file) => ({
+                type: 'file',
+                mediaType: file.mimeType,
+                filename: file.name,
+                url: file.cdnUrl,
+              }))
+            : undefined,
+      }
+
+      await saveUserMessage(userMessageData)
+
+      if (currentFiles.length > 0) {
+        await sendMessage({
+          text: text,
+          files: currentFiles.map((file) => ({
+            type: 'file' as const,
             mediaType: file.mimeType,
             filename: file.name,
             url: file.cdnUrl,
-          }))
-        : undefined,
+          })),
+        })
+      } else {
+        await sendMessage({
+          text: text,
+        })
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
     }
-
-    await saveUserMessage(userMessageData)
-
-    if (currentFiles.length > 0) {
-      await sendMessage({
-        text: text,
-        files: currentFiles.map((file) => ({
-          type: 'file' as const,
-          mediaType: file.mimeType,
-          filename: file.name,
-          url: file.cdnUrl,
-        })),
-      })
-    } else {
-      await sendMessage({
-        text: text,
-      })
-    }
-  } catch (error) {
-    console.error('Error sending message:', error)
   }
-}
 
   const startEditingMessage = (messageId: string, currentText: string) => {
     setEditingMessageId(messageId)
@@ -249,128 +247,123 @@ const onSubmit = async (e: React.FormEvent) => {
     setEditingText('')
   }
 
-const saveEditedMessage = async (messageId: string) => {
-  const trimmedText = editingText.trim()
-  if (!trimmedText) return
+  const saveEditedMessage = async (messageId: string) => {
+    const trimmedText = editingText.trim()
+    if (!trimmedText) return
 
-  const messageIndex = messages.findIndex(msg => msg.id === messageId)
-  if (messageIndex === -1) return
+    const messageIndex = messages.findIndex((msg) => msg.id === messageId)
+    if (messageIndex === -1) return
 
-  try {
-    console.log('Editing message:', messageId, 'with content:', trimmedText)
-  
-    const editResponse = await fetch(`/api/chats/${chatId}/messages/${messageId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        content: trimmedText,
-        action: 'replace'
-      }),
-    })
+    try {
+      console.log('Editing message:', messageId, 'with content:', trimmedText)
 
-    if (!editResponse.ok) {
-      throw new Error('Failed to edit message')
+      const editResponse = await fetch(`/api/chats/${chatId}/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: trimmedText,
+          action: 'replace',
+        }),
+      })
+
+      if (!editResponse.ok) {
+        throw new Error('Failed to edit message')
+      }
+
+      const editResult = await editResponse.json()
+      console.log('Edit result:', editResult)
+
+      const messagesUpToEdit = messages.slice(0, messageIndex)
+      const restOfMessages = messages.slice(messageIndex + 2, messages.length)
+      setMessages([...messagesUpToEdit, ...restOfMessages])
+
+      setEditingMessageId(null)
+      setEditingText('')
+
+      await sendMessage({
+        text: trimmedText,
+      })
+
+      console.log('Message edited and regenerated successfully')
+    } catch (error) {
+      console.error('Error editing message:', error)
+      alert('Failed to edit message. Please try again.')
     }
-
-    const editResult = await editResponse.json()
-    console.log('Edit result:', editResult)
-
-    const messagesUpToEdit = messages.slice(0, messageIndex)
-     const restOfMessages = messages.slice(messageIndex + 2, messages.length)
-    setMessages([
-      ...messagesUpToEdit,
-      ...restOfMessages
-    ])
-
-    setEditingMessageId(null)
-    setEditingText('')
-
-    await sendMessage({
-      text: trimmedText
-    })
-
-    console.log('Message edited and regenerated successfully')
-
-  } catch (error) {
-    console.error('Error editing message:', error)
-    alert('Failed to edit message. Please try again.')
   }
-}
 
   const handleFileUpload = (fileData: any) => {
     setAttachedFiles((prev) => [...prev, fileData])
   }
 
-const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boolean }) => {
-  try {
-    console.log('=== Saving User Message ===')
-    console.log('User message to save:', userMessage)
-    console.log('Options:', options)
+  const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boolean }) => {
+    try {
+      console.log('=== Saving User Message ===')
+      console.log('User message to save:', userMessage)
+      console.log('Options:', options)
 
-    const existingResponse = await fetch(`/api/chats/${chatId}`)
-    let existingMessages = []
-    
-    if (existingResponse.ok) {
-      const chatData = await existingResponse.json()
-      existingMessages = chatData.chat?.messages || []
-    }
-    
-    console.log('Existing messages before adding user message:', existingMessages)
-  
-    const formattedUserMessage = {
-      id: userMessage.id || `user-${Date.now()}`,
-      role: 'user',
-      content: userMessage.text || userMessage.content || '',
-      parts: userMessage.parts || [{ type: 'text', text: userMessage.text || userMessage.content || '' }],
-      timestamp: new Date()
-    }
+      const existingResponse = await fetch(`/api/chats/${chatId}`)
+      let existingMessages = []
 
-    if (userMessage.files && userMessage.files.length > 0) {
-      const fileParts = userMessage.files.map((file: any) => ({
-        type: 'file',
-        file: {
+      if (existingResponse.ok) {
+        const chatData = await existingResponse.json()
+        existingMessages = chatData.chat?.messages || []
+      }
+
+      console.log('Existing messages before adding user message:', existingMessages)
+
+      const formattedUserMessage = {
+        id: userMessage.id || `user-${Date.now()}`,
+        role: 'user',
+        content: userMessage.text || userMessage.content || '',
+        parts: userMessage.parts || [
+          { type: 'text', text: userMessage.text || userMessage.content || '' },
+        ],
+        timestamp: new Date(),
+      }
+
+      if (userMessage.files && userMessage.files.length > 0) {
+        const fileParts = userMessage.files.map((file: any) => ({
           type: 'file',
-          mediaType: file.mediaType,
-          name: file.filename,
-          url: file.url || file.cdnUrl,
-        }
-      }))
-      formattedUserMessage.parts = [
-        ...formattedUserMessage.parts,
-        ...fileParts
-      ]
-    }
+          file: {
+            type: 'file',
+            mediaType: file.mediaType,
+            name: file.filename,
+            url: file.url || file.cdnUrl,
+          },
+        }))
+        formattedUserMessage.parts = [...formattedUserMessage.parts, ...fileParts]
+      }
 
-    const allMessages = [...existingMessages, formattedUserMessage]
-    
-    console.log('All messages including new user message:', allMessages)
-   
-    const response = await fetch(`/api/chats/${chatId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        messages: allMessages,
-        ...(chatTitle === 'New Chat' && {
-          title: generateTitleFromMessage(formattedUserMessage)
-        })
-      }),
-    })
-    
-    if (!response.ok) {
-      throw new Error(`Failed to save user message: ${response.statusText}`)
+      const allMessages = [...existingMessages, formattedUserMessage]
+
+      console.log('All messages including new user message:', allMessages)
+
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: allMessages,
+          ...(chatTitle === 'New Chat' && {
+            title: generateTitleFromMessage(formattedUserMessage),
+          }),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to save user message: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('User message saved successfully:', result)
+    } catch (error) {
+      console.error('Error saving user message:', error)
+      throw error
     }
-    
-    const result = await response.json()
-    console.log('User message saved successfully:', result)
-  } catch (error) {
-    console.error('Error saving user message:', error)
-    throw error
   }
-}
 
   const renderFilePreview = (file: any) => {
     if (!file) {
@@ -595,59 +588,67 @@ const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boole
                   )}
                 >
                   {isEditing ? (
-  <div className="space-y-3">
-    <div className="relative">
-      <textarea
-        value={editingText}
-        onChange={(e) => setEditingText(e.target.value)}
-          className="w-full p-3 rounded-lg bg-neutral-700 text-white resize-none min-h-[100px] max-h-[300px] 
-             focus:outline-none focus:ring-0 focus:border-transparent"
-        rows={4}
-        autoFocus
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            cancelEditing()
-          } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            saveEditedMessage(message.id)
-          }
-        }}
-        placeholder="Edit your message..."
-      />
-    </div>
-    
-    <div className="flex justify-end gap-2">
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={cancelEditing}
-        disabled={status === 'streaming'}
-        className="h-8 px-3 text-gray-300 rounded-full bg-black hover:bg-neutral-900 hover:text-white"
-      >
-        Cancel
-      </Button>
-      <Button
-        size="sm"
-        onClick={() => saveEditedMessage(message.id)}
-        disabled={!editingText.trim() || status === 'streaming'}
-        className="h-8 px-3 bg-white text-black rounded-full hover:bg-gray-200"
-      >
-        {status === 'streaming' ? (
-          <span className="flex items-center gap-1.5">
-            <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Generating...
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5">
-            Send
-          </span>
-        )}
-      </Button>
-    </div>
-  </div>
-)  : (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="max-h-[300px] min-h-[100px] w-full resize-none rounded-lg bg-neutral-700 p-3 text-white focus:border-transparent focus:ring-0 focus:outline-none"
+                          rows={4}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              cancelEditing()
+                            } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                              saveEditedMessage(message.id)
+                            }
+                          }}
+                          placeholder="Edit your message..."
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={cancelEditing}
+                          disabled={status === 'streaming'}
+                          className="h-8 rounded-full bg-black px-3 text-gray-300 hover:bg-neutral-900 hover:text-white"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => saveEditedMessage(message.id)}
+                          disabled={!editingText.trim() || status === 'streaming'}
+                          className="h-8 rounded-full bg-white px-3 text-black hover:bg-gray-200"
+                        >
+                          {status === 'streaming' ? (
+                            <span className="flex items-center gap-1.5">
+                              <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24">
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              Generating...
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5">Send</span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="relative">
                       <div className="break-words whitespace-pre-wrap">{textParts}</div>
 
@@ -662,7 +663,7 @@ const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boole
                 </div>
 
                 {isUserMessage && !isEditing && (
-                  <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -670,7 +671,7 @@ const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boole
                           variant="ghost"
                           onClick={() => startEditingMessage(message.id, textParts)}
                           disabled={status === 'streaming'}
-                          className="h-8 p-1.5 text-gray-400 hover:text-white hover:bg-gray-700"
+                          className="h-8 p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white"
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
@@ -699,99 +700,99 @@ const saveUserMessage = async (userMessage: any, options?: { replaceMode?: boole
       </div>
 
       <div className="border-gray-700 bg-neutral-800 p-4">
-  <form onSubmit={onSubmit} className="mx-auto max-w-3xl">
-    <div className="relative">
-      {attachedFiles.length > 0 && (
-        <div className="mb-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">
-          {attachedFiles.map((file, index) => {
-            const fileType = getFileType(file.mimeType)
+        <form onSubmit={onSubmit} className="mx-auto max-w-3xl">
+          <div className="relative">
+            {attachedFiles.length > 0 && (
+              <div className="mb-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+                {attachedFiles.map((file, index) => {
+                  const fileType = getFileType(file.mimeType)
 
-            return (
-              <div key={index} className="group relative">
-                {fileType === 'image' ? (
-                  <div className="relative">
-                    <img
-                      src={file.url || file.cdnUrl}
-                      alt={file.name}
-                      className="h-16 w-16 rounded-md border-2 border-gray-600 object-cover"
-                    />
-                    <div className="bg-opacity-0 group-hover:bg-opacity-30 absolute inset-0 flex items-center justify-center rounded-md bg-black transition-all">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
-                        }}
-                        className="rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </button>
+                  return (
+                    <div key={index} className="group relative">
+                      {fileType === 'image' ? (
+                        <div className="relative">
+                          <img
+                            src={file.url || file.cdnUrl}
+                            alt={file.name}
+                            className="h-16 w-16 rounded-md border-2 border-gray-600 object-cover"
+                          />
+                          <div className="bg-opacity-0 group-hover:bg-opacity-30 absolute inset-0 flex items-center justify-center rounded-md bg-black transition-all">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+                              }}
+                              className="rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                            >
+                              <X className="h-3 w-3 text-white" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className={`h-16 w-20 rounded-md border-2 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
+                        >
+                          {getFileIcon(fileType, 'h-5 w-5')}
+                          <span
+                            className="mt-1 w-full truncate text-center text-xs text-gray-300"
+                            title={file.name}
+                          >
+                            {file.name.length > 8 ? file.name.substring(0, 6) + '...' : file.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+                            }}
+                            className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`h-16 w-20 rounded-md border-2 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
-                  >
-                    {getFileIcon(fileType, 'h-5 w-5')}
-                    <span
-                      className="mt-1 w-full truncate text-center text-xs text-gray-300"
-                      title={file.name}
-                    >
-                      {file.name.length > 8 ? file.name.substring(0, 6) + '...' : file.name}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
-                      }}
-                      className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
-                    >
-                      <X className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                )}
+                  )
+                })}
               </div>
-            )
-          })}
-        </div>
-      )}
+            )}
 
-      <div className="relative">
-        <div className="absolute top-1/2 left-2 -translate-y-1/2 z-10">
-          <InputOptions onFileUpload={handleFileUpload} />
-        </div>
+            <div className="relative">
+              <div className="absolute top-1/2 left-2 z-10 -translate-y-1/2">
+                <InputOptions onFileUpload={handleFileUpload} />
+              </div>
 
-        <textarea
-          rows={1}
-          className="max-h-[200px] w-full resize-none overflow-hidden rounded-xl bg-neutral-700 py-3 pr-12 pl-12 text-white placeholder-gray-400 transition-colors duration-150 outline-none hover:bg-neutral-600 focus:ring-1 focus:ring-gray-500"
-          placeholder="Ask anything"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            e.target.style.height = 'auto'
-            e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
-          }}
-          disabled={status === 'streaming'}
-        />
+              <textarea
+                rows={1}
+                className="max-h-[200px] w-full resize-none overflow-hidden rounded-xl bg-neutral-700 py-3 pr-12 pl-12 text-white placeholder-gray-400 transition-colors duration-150 outline-none hover:bg-neutral-600 focus:ring-1 focus:ring-gray-500"
+                placeholder="Ask anything"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
+                }}
+                disabled={status === 'streaming'}
+              />
 
-        <div className="absolute top-1/2 right-2 -translate-y-1/2 z-10">
-          <button
-            type="submit"
-            disabled={
-              status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)
-            }
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-600 text-gray-300 transition-colors duration-150 hover:bg-neutral-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <ArrowUp className="h-4 w-4" />
-          </button>
-        </div>
+              <div className="absolute top-1/2 right-2 z-10 -translate-y-1/2">
+                <button
+                  type="submit"
+                  disabled={
+                    status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)
+                  }
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-600 text-gray-300 transition-colors duration-150 hover:bg-neutral-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 text-center text-xs text-gray-500">
+            ChatGPT can make mistakes. Check Important Info. See cookie preferences.
+          </div>
+        </form>
       </div>
-    </div>
-
-    <div className="mt-2 text-center text-xs text-gray-500">
-      ChatGPT can make mistakes. Check Important Info. See cookie preferences.
-    </div>
-  </form>
-</div>
     </div>
   )
 }

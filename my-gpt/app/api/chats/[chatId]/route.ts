@@ -28,10 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { chatId: stri
 }
 
 // Update chat
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { chatId: string } }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: { chatId: string } }) {
   try {
     const { userId } = getAuth(req)
     if (!userId) {
@@ -43,21 +40,16 @@ export async function PATCH(
     const { messages, title } = body
 
     // Update the chat with new messages
-    const updatedChat = await chatService.updateChat(
-      chatId,
-      userId,
-      {
-        messages,
-        ...(title && { title })
-      }
-    )
+    const updatedChat = await chatService.updateChat(chatId, userId, {
+      messages,
+      ...(title && { title }),
+    })
 
     return Response.json({
       success: true,
       chat: updatedChat,
-      messages: updatedChat.messages
+      messages: updatedChat.messages,
     })
-
   } catch (error) {
     console.error('Error updating chat:', error)
     return new Response('Internal Server Error', { status: 500 })

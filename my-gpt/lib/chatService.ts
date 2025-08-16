@@ -25,21 +25,21 @@ export class ChatService {
     return chat
   }
 
-    async removeMessagesFrom(
+  async removeMessagesFrom(
     chatId: string,
     messageId: string,
     userId: string
   ): Promise<ChatMessage[]> {
     const collection = await this.getCollection()
-    
+
     const chat = await collection.findOne({ id: chatId, userId })
     if (!chat) {
       throw new Error('Chat not found')
     }
 
     const messages = chat.messages || []
-    const messageIndex = messages.findIndex(msg => msg.id === messageId)
-    
+    const messageIndex = messages.findIndex((msg) => msg.id === messageId)
+
     if (messageIndex === -1) {
       throw new Error('Message not found')
     }
@@ -54,8 +54,8 @@ export class ChatService {
         $set: {
           messages: updatedMessages,
           updatedAt: new Date(),
-          lastMessageAt: lastMessage?.timestamp || new Date()
-        }
+          lastMessageAt: lastMessage?.timestamp || new Date(),
+        },
       }
     )
 
@@ -83,9 +83,10 @@ export class ChatService {
         isShared: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        lastMessageAt: updateData.messages && updateData.messages.length > 0 
-          ? updateData.messages[updateData.messages.length - 1]?.timestamp || new Date()
-          : new Date(),
+        lastMessageAt:
+          updateData.messages && updateData.messages.length > 0
+            ? updateData.messages[updateData.messages.length - 1]?.timestamp || new Date()
+            : new Date(),
       }
 
       await collection.insertOne(newChat)
@@ -98,47 +99,45 @@ export class ChatService {
 
     if (updateData.messages) {
       // Generate unique IDs for messages that don't have them
-      const messagesWithIds = updateData.messages.map(msg => ({
+      const messagesWithIds = updateData.messages.map((msg) => ({
         ...msg,
         id: msg.id || nanoid(),
-        timestamp: msg.timestamp || new Date()
+        timestamp: msg.timestamp || new Date(),
       }))
 
       updateFields.messages = messagesWithIds
-      updateFields.lastMessageAt = messagesWithIds.length > 0
-        ? messagesWithIds[messagesWithIds.length - 1].timestamp
-        : new Date()
+      updateFields.lastMessageAt =
+        messagesWithIds.length > 0
+          ? messagesWithIds[messagesWithIds.length - 1].timestamp
+          : new Date()
     }
 
     if (updateData.title) {
       updateFields.title = updateData.title
     }
 
-    await collection.updateOne(
-      { id: chatId, userId },
-      { $set: updateFields }
-    )
+    await collection.updateOne({ id: chatId, userId }, { $set: updateFields })
 
     const updatedChat = await collection.findOne({ id: chatId, userId })
     return updatedChat!
   }
 
-async replaceMessageAndRemoveAfter(
+  async replaceMessageAndRemoveAfter(
     chatId: string,
     messageId: string,
     newMessage: ChatMessage,
     userId: string
   ): Promise<ChatMessage[]> {
     const collection = await this.getCollection()
-    
+
     const chat = await collection.findOne({ id: chatId, userId })
     if (!chat) {
       throw new Error('Chat not found')
     }
 
     const messages = chat.messages || []
-    const messageIndex = messages.findIndex(msg => msg.id === messageId)
-    
+    const messageIndex = messages.findIndex((msg) => msg.id === messageId)
+
     if (messageIndex === -1) {
       throw new Error('Message not found')
     }
@@ -146,13 +145,10 @@ async replaceMessageAndRemoveAfter(
     const messageWithId = {
       ...newMessage,
       id: newMessage.id || nanoid(),
-      timestamp: newMessage.timestamp || new Date()
+      timestamp: newMessage.timestamp || new Date(),
     }
 
-    const updatedMessages = [
-      ...messages.slice(0, messageIndex),
-      messageWithId
-    ]
+    const updatedMessages = [...messages.slice(0, messageIndex), messageWithId]
 
     await collection.updateOne(
       { id: chatId, userId },
@@ -160,8 +156,8 @@ async replaceMessageAndRemoveAfter(
         $set: {
           messages: updatedMessages,
           updatedAt: new Date(),
-          lastMessageAt: messageWithId.timestamp
-        }
+          lastMessageAt: messageWithId.timestamp,
+        },
       }
     )
 

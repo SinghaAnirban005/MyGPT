@@ -1,4 +1,3 @@
-
 import { getAuth } from '@clerk/nextjs/server'
 import { NextRequest } from 'next/server'
 import { ChatService } from '@/lib/chatService'
@@ -8,8 +7,8 @@ const chatService = new ChatService()
 
 // Edit/Replace a specific message
 export async function PATCH(
-  req: NextRequest, 
-  { params }: { params: { chatId: string, messageId: string } }
+  req: NextRequest,
+  { params }: { params: { chatId: string; messageId: string } }
 ) {
   try {
     const { userId } = getAuth(req)
@@ -22,31 +21,29 @@ export async function PATCH(
     const { content, action = 'replace' } = body
 
     if (action === 'replace') {
-
       const newMessage: ChatMessage = {
         id: messageId,
         role: 'user',
         content: content,
         parts: [{ type: 'text', text: content }],
-        timestamp: new Date()
+        timestamp: new Date(),
       }
 
       const updatedMessages = await chatService.replaceMessageAndRemoveAfter(
-        chatId, 
-        messageId, 
-        newMessage, 
+        chatId,
+        messageId,
+        newMessage,
         userId
       )
 
-      return Response.json({ 
-        success: true, 
+      return Response.json({
+        success: true,
         messages: updatedMessages,
-        removedCount: 'Messages after edited message were removed'
+        removedCount: 'Messages after edited message were removed',
       })
     }
 
     return Response.json({ error: 'Invalid action' }, { status: 400 })
-
   } catch (error) {
     console.error('Error editing message:', error)
     return new Response('Internal Server Error', { status: 500 })
@@ -55,8 +52,8 @@ export async function PATCH(
 
 // Delete a specific message and all after it
 export async function DELETE(
-  req: NextRequest, 
-  { params }: { params: { chatId: string, messageId: string } }
+  req: NextRequest,
+  { params }: { params: { chatId: string; messageId: string } }
 ) {
   try {
     const { userId } = getAuth(req)
@@ -68,12 +65,11 @@ export async function DELETE(
 
     const updatedMessages = await chatService.removeMessagesFrom(chatId, messageId, userId)
 
-    return Response.json({ 
-      success: true, 
+    return Response.json({
+      success: true,
       messages: updatedMessages,
-      message: 'Message and all subsequent messages removed'
+      message: 'Message and all subsequent messages removed',
     })
-
   } catch (error) {
     console.error('Error deleting message:', error)
     return new Response('Internal Server Error', { status: 500 })
