@@ -302,12 +302,21 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
 }
 
 const renderFilePreview = (file: any) => {
-  if (file && file.mediaType.startsWith('image/')) {
+  
+  if (!file) {
+    return null
+  }
+
+  const mediaType = file.mediaType || file.mimeType
+  const url = file.url || file.cdnUrl
+  const name = file.filename || file.name
+
+  if (mediaType && mediaType.startsWith('image/')) {
     return (
       <div className="mt-2 rounded-lg overflow-hidden">
         <img 
-          src={file?.url || ""} 
-          alt={file?.name || ""} 
+          src={url || ""} 
+          alt={name || "Image"} 
           className="max-w-full max-h-[300px] object-contain rounded-lg"
         />
       </div>
@@ -319,12 +328,12 @@ const renderFilePreview = (file: any) => {
       <div className="flex items-center gap-2">
         <Paperclip className="h-4 w-4 flex-shrink-0" />
         <a 
-          href={file?.url || ""} 
+          href={url || ""} 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-sm text-blue-400 hover:underline truncate"
         >
-          {file?.name || ""}
+          {name || "File"}
         </a>
       </div>
     </div>
@@ -373,106 +382,115 @@ return (
     <div className="flex-1 overflow-auto p-4">
       <div className="max-w-3xl mx-auto space-y-6">
         {messages.map((message, index) => {
-          const textParts = message.parts
-            ?.filter((part: any) => part.type === 'text')
-            ?.map((part: any) => part.text)
-            ?.join('') || ''
-            
-          const fileParts = message.parts
-            ?.filter((part: any) => part.type === 'file')
-            ?.map((part: any) => part.file) || []
 
-          const isEditing = editingMessageId === message.id
-          const isUserMessage = message.role === 'user'
+    const textParts = message.parts
+      ?.filter((part: any) => part.type === 'text')
+      ?.map((part: any) => part.text)
+      ?.join('') || ''
+      
+    let fileParts: any[] = []
+    
+    if (message?.files && Array.isArray(message?.files)) {
+      fileParts = message.files
+    }
+    
+    // Fallback to old format (parts-based)
+    else if (message.parts) {
+      fileParts = message.parts
+        ?.filter((part: any) => part.type === 'file')
+        ?.map((part: any) => part.file || part) || []
+    }
 
+  const isEditing = editingMessageId === message.id
+  const isUserMessage = message.role === 'user'
 
-          return (
-            <div 
-              key={message.id} 
-              className={cn(
-                "group relative",
-                isUserMessage ? "flex flex-col items-end" : "flex flex-col items-start"
-              )}
-            >
-              <div className={cn(
-                "max-w-[80%] rounded-xl p-4",
-                isUserMessage 
-                  ? "bg-neutral-700 text-white" 
-                  : "bg-neutral-800 text-gray-100"
-              )}>
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <textarea
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                        className="w-full p-3 rounded-lg bg-neutral-700 text-white resize-none min-h-[100px] max-h-[300px] border-none focus:outline-none focus:ring-0 focus:border-transparent"
-                      rows={4}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          cancelEditing()
-                        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                          saveEditedMessage(message.id)
-                        }
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => saveEditedMessage(message.id)}
-                        disabled={!editingText.trim() || status === 'streaming'}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Check className="h-3 w-3 mr-1" />
-                        Save & Submit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={cancelEditing}
-                        className="text-gray-300 border-gray-600 hover:bg-gray-700"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div className="whitespace-pre-wrap break-words">
-                      {textParts}
-                    </div>
-                    
-                    {fileParts.map((file, fileIndex) => (
-                      <div key={`${message.id}-file-${fileIndex}`} className="mt-3">
-                        {renderFilePreview(file)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {isUserMessage && !isEditing && (
-                <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => startEditingMessage(message.id, textParts)}
-                        disabled={status === 'streaming'}
-                        className="h-8 p-1.5 text-gray-400 hover:text-white hover:bg-gray-700"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit message</TooltipContent>
-                  </Tooltip>
-                </div>
-              )}
+  return (
+    <div 
+      key={message.id} 
+      className={cn(
+        "group relative",
+        isUserMessage ? "flex flex-col items-end" : "flex flex-col items-start"
+      )}
+    >
+      <div className={cn(
+        "max-w-[80%] rounded-xl p-4",
+        isUserMessage 
+          ? "bg-neutral-700 text-white" 
+          : "bg-neutral-800 text-gray-100"
+      )}>
+        {isEditing ? (
+          <div className="space-y-3">
+            <textarea
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              className="w-full p-3 rounded-lg bg-neutral-700 text-white resize-none min-h-[100px] max-h-[300px] border-none focus:outline-none focus:ring-0 focus:border-transparent"
+              rows={4}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  cancelEditing()
+                } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  saveEditedMessage(message.id)
+                }
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => saveEditedMessage(message.id)}
+                disabled={!editingText.trim() || status === 'streaming'}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Save & Submit
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cancelEditing}
+                className="text-gray-300 border-gray-600 hover:bg-gray-700"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancel
+              </Button>
             </div>
-          )
-        })}
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="whitespace-pre-wrap break-words">
+              {textParts}
+            </div>
+            
+            {fileParts.length > 0 && fileParts.map((file, fileIndex) => (
+              <div key={`${message.id}-file-${fileIndex}`} className="mt-3">
+                {renderFilePreview(file)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isUserMessage && !isEditing && (
+        <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startEditingMessage(message.id, textParts)}
+                disabled={status === 'streaming'}
+                className="h-8 p-1.5 text-gray-400 hover:text-white hover:bg-gray-700"
+              >
+                <Edit className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit message</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+    </div>
+  )
+})}
         
         {status === 'streaming' && (
           <div className="flex justify-start">
