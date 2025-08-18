@@ -1,6 +1,6 @@
 # My GPT
 
-![Project Banner](public/banner.png)
+<img width="1799" height="962" alt="Screenshot from 2025-08-18 14-28-18" src="https://github.com/user-attachments/assets/7bcdd23d-7a14-4181-b0af-5334f7b1a9f2" />
 
 A pixel-perfect, full-stack clone of ChatGPT with memory, file uploads, and message editing capabilities. Built with Next.js, Vercel AI SDK, and modern web technologies.
 
