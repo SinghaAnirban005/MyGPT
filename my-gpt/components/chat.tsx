@@ -4,14 +4,15 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, Edit, X, Download, Eye } from 'lucide-react'
+import { ArrowUp, Edit, X, Download, Eye, Pencil } from 'lucide-react'
 import { FileData } from '@/lib/file-data'
 import { Skeleton } from './ui/skeleton'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
 import { InputOptions } from './input-options'
 import { cn } from '@/lib/utils'
 import { getFileType, getFileIcon, getFileColor, formatFileSize } from './file-utilities'
-
+import { hasAttachments } from '@/lib/hasAttachments'
+ 
 interface ChatProps {
   chatId: string
   onChatUpdate?: () => void
@@ -567,6 +568,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
       <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-3xl space-y-6">
           {messages.map((message, index) => {
+            console.log('MESSAGE ', message)
             const textParts =
               message.parts
                 ?.filter((part: any) => part.type === 'text')
@@ -679,7 +681,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
                   )}
                 </div>
 
-                {isUserMessage && !isEditing && (
+                {isUserMessage && !isEditing && !hasAttachments(message) && (
                   <div className="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -690,13 +692,12 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
                           disabled={status === 'streaming'}
                           className="h-8 p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white"
                         >
-                          <Edit className="h-3.5 w-3.5" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <div className="text-xs">
                           <div>Edit message</div>
-                          <div className="text-gray-400">This will regenerate the AI response</div>
                         </div>
                       </TooltipContent>
                     </Tooltip>
