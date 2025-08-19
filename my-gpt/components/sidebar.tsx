@@ -116,7 +116,7 @@ export function Sidebar({
     >
       <div className="flex items-center justify-between border-gray-700 p-4">
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full"
           onClick={collapsed ? onCollapse : undefined}
         >
           <svg

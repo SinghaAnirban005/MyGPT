@@ -548,7 +548,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
 
   if (!isSignedIn || !user) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-gray-800 p-4">
+      <div className="flex h-full flex-col items-center justify-center bg-white p-4">
         <div className="max-w-md text-center">
           <h2 className="mb-2 text-xl font-semibold">Please Sign In</h2>
           <p className="mb-4 text-gray-400">You need to be signed in to use the chat.</p>

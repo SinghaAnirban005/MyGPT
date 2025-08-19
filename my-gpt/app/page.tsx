@@ -41,12 +41,12 @@ export default function Home() {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen bg-gray-900">
+      <div className="flex h-screen">
         <div className="hidden md:block">
-          <Skeleton className="h-full w-[260px] border-r border-gray-700" />
+          <Skeleton className="h-full w-[260px] border-r bg-neutral-900" />
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full bg-neutral-900" />
         </div>
       </div>
     )
@@ -54,18 +54,19 @@ export default function Home() {
 
   if (!isSignedIn || !user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-900">
-        <div className="max-w-md p-4 text-center text-white">
-          <h2 className="mb-2 text-xl font-semibold">Please Sign In</h2>
-          <p className="mb-4 text-gray-400">You need to be signed in to use the chat.</p>
-          <Button
-            onClick={() => (window.location.href = '/sign-in')}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            Sign In
-          </Button>
-        </div>
-      </div>
+      // <div className="flex h-screen items-center justify-center bg-white">
+      //   <div className="max-w-md p-4 text-center text-white">
+      //     <h2 className="mb-2 text-xl font-semibold">Please Sign In</h2>
+      //     <p className="mb-4 text-gray-400">You need to be signed in to use the chat.</p>
+      //     <Button
+      //       onClick={() => (window.location.href = '/sign-in')}
+      //       className="bg-green-600 hover:bg-green-700"
+      //     >
+      //       Sign In
+      //     </Button>
+      //   </div>
+      // </div>
+      <div>anirba</div>
     )
   }
 

@@ -2,7 +2,10 @@ import { SignUp } from '@clerk/nextjs'
 
 export default function Page() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="absolute top-6 left-6">
+        <h1 className="text-xl font-medium text-gray-900">ChatGPT</h1>
+      </div>
       <SignUp
         appearance={{
           elements: {
