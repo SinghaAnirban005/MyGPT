@@ -12,7 +12,7 @@ import { InputOptions } from './input-options'
 import { cn } from '@/lib/utils'
 import { getFileType, getFileIcon, getFileColor, formatFileSize } from './file-utilities'
 import { hasAttachments } from '@/lib/hasAttachments'
- 
+
 interface ChatProps {
   chatId: string
   onChatUpdate?: () => void

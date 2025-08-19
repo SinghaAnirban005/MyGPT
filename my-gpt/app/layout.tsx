@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="en" className="h-full bg-gray-900">
+      <html lang="en" className="h-full bg-white">
         <body
           className={cn('h-full w-full bg-gray-900 text-gray-100 antialiased', 'flex flex-col')}
         >
