@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, Edit, X, Download, Eye, Pencil } from 'lucide-react'
+import { ArrowUp, Edit, X, Download, Eye, Pencil, Mic } from 'lucide-react'
 import { FileData } from '@/lib/file-data'
 import { Skeleton } from './ui/skeleton'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
@@ -718,11 +718,11 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
         </div>
       </div>
 
-      <div className="border-gray-700 bg-neutral-800 p-4">
+       <div className="border-gray-700 bg-neutral-800 p-4">
         <form onSubmit={onSubmit} className="mx-auto max-w-3xl">
           <div className="relative">
             {attachedFiles.length > 0 && (
-              <div className="mb-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+              <div className="mb-3 flex max-h-32 flex-wrap gap-2 overflow-y-auto">
                 {attachedFiles.map((file, index) => {
                   const fileType = getFileType(file.mimeType)
 
@@ -775,40 +775,60 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
               </div>
             )}
 
-            <div className="relative">
-              <div className="absolute top-1/2 left-2 z-10 -translate-y-1/2">
+            <div className="relative flex items-center rounded-full bg-neutral-700 px-4 py-3 shadow-sm">
+              <div className="flex items-center space-x-2">
                 <InputOptions onFileUpload={handleFileUpload} />
               </div>
 
-              <textarea
-                rows={1}
-                className="max-h-[200px] w-full resize-none overflow-hidden rounded-xl bg-neutral-700 py-3 pr-12 pl-12 text-white placeholder-gray-400 transition-colors duration-150 outline-none hover:bg-neutral-600 focus:ring-1 focus:ring-gray-500"
-                placeholder="Ask anything"
+              <input
+                type="text"
                 value={input}
-                onChange={(e) => {
-                  setInput(e.target.value)
-                  e.target.style.height = 'auto'
-                  e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
-                }}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask anything"
+                className="flex-1 bg-transparent px-3 text-white placeholder-gray-400 outline-none"
                 disabled={status === 'streaming'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    if (input.trim() || attachedFiles.length > 0) {
+                      onSubmit(e)
+                    }
+                  }
+                }}
               />
 
-              <div className="absolute top-1/2 right-2 z-10 -translate-y-1/2">
-                <button
+              <div className="flex items-center space-x-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white rounded-full hover:text-white hover:bg-neutral-600"
+                  disabled={status === 'streaming'}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+                
+                <Button
                   type="submit"
                   disabled={
                     status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)
                   }
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-600 text-gray-300 transition-colors duration-150 hover:bg-neutral-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-8 w-8 rounded-full bg-white p-0 text-black hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400"
                 >
                   <ArrowUp className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
 
-          <div className="mt-2 text-center text-xs text-gray-500">
-            ChatGPT can make mistakes. Check Important Info. See cookie preferences.
+            <div className="mt-2 text-center">
+              <p className="text-xs text-gray-500">
+                ChatGPT can make mistakes. Check important info. See{' '}
+                <button className="text-gray-400 underline hover:text-gray-300">
+                  Cookie Preferences
+                </button>
+                .
+              </p>
+            </div>
           </div>
         </form>
       </div>

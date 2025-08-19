@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client'
 
 import { useState } from 'react'
@@ -19,11 +20,15 @@ import {
   Smile,
   MoreHorizontal,
   HelpCircle,
+  ArrowUp,
 } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { Chat } from '@/components/chat'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InputOptions } from '@/components/input-options'
 import { useRouter } from 'next/navigation'
+import { getFileType, getFileIcon, getFileColor } from '@/components/file-utilities'
+import { FileData } from '@/lib/file-data'
 
 export default function Home() {
   const { user, isLoaded, isSignedIn } = useUser()
@@ -31,6 +36,9 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [chatUpdateTrigger, setChatUpdateTrigger] = useState(0)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [input, setInput] = useState('')
+  const [attachedFiles, setAttachedFiles] = useState<FileData[]>([])
+  const [isCreatingChat, setIsCreatingChat] = useState(false)
   const router = useRouter()
 
   const createNewChat = async () => {
@@ -47,14 +55,118 @@ export default function Home() {
         const data = await response.json()
         setCurrentChatId(data.chat.id)
         setChatUpdateTrigger((prev) => prev + 1)
+        return data.chat.id
       }
     } catch (error) {
       console.error('Error creating new chat:', error)
     }
+    return null
   }
 
   const handleChatUpdate = () => {
     setChatUpdateTrigger((prev) => prev + 1)
+  }
+
+  const handleFileUpload = (fileData: FileData) => {
+    setAttachedFiles((prev) => [...prev, fileData])
+  }
+
+  const removeFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const sendInitialMessage = async (chatId: string, message: string, files: FileData[] = []) => {
+    try {
+      // First save the user message
+      const userMessageData = {
+        text: message,
+        files:
+          files.length > 0
+            ? files.map((file) => ({
+                type: 'file',
+                mediaType: file.mimeType,
+                filename: file.name,
+                url: file.cdnUrl,
+              }))
+            : undefined,
+      }
+
+      const existingResponse = await fetch(`/api/chats/${chatId}`)
+      let existingMessages = []
+
+      if (existingResponse.ok) {
+        const chatData = await existingResponse.json()
+        existingMessages = chatData.chat?.messages || []
+      }
+
+      const formattedUserMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: userMessageData.text || '',
+        parts: [
+          { type: 'text', text: userMessageData.text || '' },
+          ...(userMessageData.files?.map((file) => ({
+            type: 'file',
+            file: {
+              type: 'file',
+              mediaType: file.mediaType,
+              name: file.filename,
+              url: file.url,
+            },
+          })) || []),
+        ],
+        timestamp: new Date(),
+      }
+
+      const allMessages = [...existingMessages, formattedUserMessage]
+
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: allMessages,
+          title: message.length > 50 ? message.substring(0, 50) + '...' : message || 'New Chat',
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to save initial message: ${response.statusText}`)
+      }
+    } catch (error) {
+      console.error('Error sending initial message:', error)
+    }
+  }
+
+  const handleInputSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const text = input.trim()
+    if ((!text && attachedFiles.length === 0) || isCreatingChat) return
+
+    setIsCreatingChat(true)
+    
+    try {
+      // Create new chat
+      const newChatId = await createNewChat()
+      
+      if (newChatId && (text || attachedFiles.length > 0)) {
+        // Send the initial message
+        await sendInitialMessage(newChatId, text, attachedFiles)
+        
+        // Clear the input and files
+        setInput('')
+        setAttachedFiles([])
+        
+        // Update chat trigger to refresh sidebar
+        setChatUpdateTrigger((prev) => prev + 1)
+      }
+    } catch (error) {
+      console.error('Error creating chat with message:', error)
+    } finally {
+      setIsCreatingChat(false)
+    }
   }
 
   if (!isLoaded) {
@@ -233,16 +345,136 @@ export default function Home() {
           {currentChatId ? (
             <Chat key={currentChatId} chatId={currentChatId} onChatUpdate={handleChatUpdate} />
           ) : (
-            <div className="flex h-full items-center justify-center">
-              <Card className="border-neutral-700 bg-neutral-800">
-                <CardContent className="p-6 text-center">
-                  <h2 className="mb-4 text-xl font-semibold">Welcome to ChatGPT</h2>
-                  <p className="mb-4 text-gray-400">Start a new conversation to begin chatting.</p>
-                  <Button onClick={createNewChat} className="bg-green-600 hover:bg-green-700">
-                    Start New Chat
-                  </Button>
-                </CardContent>
-              </Card>
+            <div className="flex h-full flex-col items-center justify-center bg-neutral-800">
+
+              <div className="mb-8 text-center">
+                <h1 className="text-3xl font-normal text-white">Ready when you are.</h1>
+              </div>
+
+              <div className="w-full max-w-2xl px-4">
+                <form onSubmit={handleInputSubmit}>
+                  {attachedFiles.length > 0 && (
+                    <div className="mb-3 flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+                      {attachedFiles.map((file, index) => {
+                        const fileType = getFileType(file.mimeType)
+
+                        return (
+                          <div key={index} className="group relative">
+                            {fileType === 'image' ? (
+                              <div className="relative">
+                                <img
+                                  src={file.url || file.cdnUrl}
+                                  alt={file.name}
+                                  className="h-16 w-16 rounded-md border-2 border-gray-600 object-cover"
+                                />
+                                <div className="bg-opacity-0 group-hover:bg-opacity-30 absolute inset-0 flex items-center justify-center rounded-md bg-black transition-all">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFile(index)}
+                                    className="rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                  >
+                                    <X className="h-3 w-3 text-white" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                className={`h-16 w-20 rounded-md border-2 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
+                              >
+                                {getFileIcon(fileType, 'h-5 w-5')}
+                                <span
+                                  className="mt-1 w-full truncate text-center text-xs text-gray-300"
+                                  title={file.name}
+                                >
+                                  {file.name.length > 8 ? file.name.substring(0, 6) + '...' : file.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFile(index)}
+                                  className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                >
+                                  <X className="h-3 w-3 text-white" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <div className="relative flex items-center rounded-full bg-neutral-700 px-4 py-3 shadow-sm">
+                    <div className="flex items-center space-x-2">
+                      <InputOptions onFileUpload={handleFileUpload} />
+                    </div>
+
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Ask anything"
+                      className="flex-1 bg-transparent px-3 text-white placeholder-gray-400 outline-none"
+                      disabled={isCreatingChat}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          if ((input.trim() || attachedFiles.length > 0) && !isCreatingChat) {
+                            handleInputSubmit(e)
+                          }
+                        }
+                      }}
+                    />
+
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white rounded-full hover:text-white hover:bg-neutral-600"
+                        disabled={isCreatingChat}
+                      >
+                        <Mic className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        type="submit"
+                        disabled={isCreatingChat || (input.trim() === '' && attachedFiles.length === 0)}
+                        className="h-8 w-8 rounded-full bg-white p-0 text-black hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400"
+                      >
+                        {isCreatingChat ? (
+                          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                        ) : (
+                          <ArrowUp className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-gray-500">
+                    ChatGPT can make mistakes. Check important info. See{' '}
+                    <button className="text-gray-400 underline hover:text-gray-300">
+                      Cookie Preferences
+                    </button>
+                    .
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
