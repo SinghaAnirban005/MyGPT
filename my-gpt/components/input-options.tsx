@@ -72,7 +72,7 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
             className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => imageInputRef.current?.click()}
           >
-            <ImageIcon className="mr-2 h-4 w-4" />
+            <ImageIcon className="mr-2 h-4 w-4 text-white" />
             Images
           </DropdownMenuItem>
 
@@ -80,7 +80,7 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
             className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => documentInputRef.current?.click()}
           >
-            <FileText className="mr-2 h-4 w-4" />
+            <FileText className="mr-2 h-4 w-4 text-white" />
             Documents
           </DropdownMenuItem>
 
@@ -88,7 +88,7 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
             className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => mediaInputRef.current?.click()}
           >
-            <Video className="mr-2 h-4 w-4" />
+            <Video className="mr-2 h-4 w-4 text-white" />
             Media Files
           </DropdownMenuItem>
 
@@ -96,25 +96,24 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
             className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
             onClick={() => archiveInputRef.current?.click()}
           >
-            <Archive className="mr-2 h-4 w-4" />
+            <Archive className="mr-2 h-4 w-4 text-white" />
             Archives
           </DropdownMenuItem>
 
           <DropdownMenuSeparator className="bg-gray-600" />
 
           <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
-            <Search className="mr-2 h-4 w-4" />
+            <Search className="mr-2 h-4 w-4 text-white" />
             Search web
           </DropdownMenuItem>
 
           <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
-            <Settings className="mr-2 h-4 w-4" />
+            <Settings className="mr-2 h-4 w-4 text-white" />
             Custom instructions
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Image input */}
       <input
         ref={imageInputRef}
         type="file"
@@ -123,7 +122,6 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
         style={{ display: 'none' }}
       />
 
-      {/* Document input */}
       <input
         ref={documentInputRef}
         type="file"
@@ -132,7 +130,6 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
         style={{ display: 'none' }}
       />
 
-      {/* Media input */}
       <input
         ref={mediaInputRef}
         type="file"
@@ -141,7 +138,6 @@ export function InputOptions({ onFileUpload }: InputOptionsProps) {
         style={{ display: 'none' }}
       />
 
-      {/* Archive input */}
       <input
         ref={archiveInputRef}
         type="file"
