@@ -142,9 +142,23 @@ export class ChatService {
       throw new Error('Message not found')
     }
 
-    const messageWithId = {
+    // Get the original message to preserve its file attachments
+    const originalMessage = messages[messageIndex]
+
+    // Extract file parts from the original message
+    const fileParts = originalMessage.parts?.filter((part) => part.type === 'file') || []
+
+    // Create the updated message with preserved file attachments
+    const messageWithId: ChatMessage = {
       ...newMessage,
-      id: newMessage.id || nanoid(),
+      // Preserve file attachments from the original message
+      parts: [
+        // Text part from the new message
+        { type: 'text', text: newMessage.content },
+        // File parts from the original message
+        ...fileParts,
+      ],
+      id: newMessage.id || messageId, // Use the original message ID
       timestamp: newMessage.timestamp || new Date(),
     }
 

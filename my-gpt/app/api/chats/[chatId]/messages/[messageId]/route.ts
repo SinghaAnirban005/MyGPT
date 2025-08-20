@@ -26,14 +26,29 @@ export async function PATCH(
 
     const { chatId, messageId } = await params
     const body = await req.json()
-    const { content, action = 'replace' } = body
+    const { content, files, action = 'replace' } = body
 
     if (action === 'replace') {
+      // Create the new message with both text and file parts
       const newMessage: ChatMessage = {
-        id: messageId,
+        id: messageId, // Use the original message ID
         role: 'user',
         content: content,
-        parts: [{ type: 'text', text: content }],
+        parts: [
+          { type: 'text', text: content },
+          // Add file parts if they exist
+          ...(files && files.length > 0
+            ? files.map((file: any) => ({
+                type: 'file' as const,
+                file: {
+                  name: file.filename || file.name,
+                  url: file.url || file.cdnUrl,
+                  mediaType: file.mediaType || file.mimeType,
+                  uuid: file.uuid,
+                },
+              }))
+            : []),
+        ],
         timestamp: new Date(),
       }
 

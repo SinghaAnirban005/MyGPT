@@ -247,19 +247,19 @@ export default function Home() {
     if ((!text && attachedFiles.length === 0) || isCreatingChat || status === 'streaming') return
 
     setIsCreatingChat(true)
-    
+
     try {
       const newChatId = await createNewChat()
-      
+
       if (newChatId && (text || attachedFiles.length > 0)) {
         await sendInitialMessage(newChatId, text, attachedFiles)
         setInput('')
         setAttachedFiles([])
-       
+
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto'
         }
-        
+
         setChatUpdateTrigger((prev) => prev + 1)
       }
     } catch (error) {
@@ -290,86 +290,93 @@ export default function Home() {
   if (!isSignedIn || !user) {
     return (
       <div className="flex min-h-screen flex-col bg-neutral-800 text-white">
-        <header className="flex items-center justify-between px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+        <header className="flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4 lg:px-6">
           <div className="lg:hidden">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 sm:h-10 sm:w-10 text-white hover:bg-neutral-700"
+              className="h-8 w-8 text-white hover:bg-neutral-700 sm:h-10 sm:w-10"
             >
               <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
-          
+
+          {/* This empty div pushes the buttons to the right */}
+          <div className="flex-1"></div>
+
           <div className="flex items-center space-x-2 sm:space-x-3">
             <Button
               variant="outline"
-              className="rounded-full border-gray-600 bg-white text-black hover:bg-gray-200 text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-9"
+              className="h-8 rounded-full border-gray-600 bg-white px-3 text-xs text-black hover:bg-gray-200 sm:h-9 sm:px-4 sm:text-sm"
               onClick={() => router.push('/sign-in')}
             >
               Log in
             </Button>
             <Button
               variant="outline"
-              className="hidden sm:inline-flex rounded-full border-neutral-700 bg-neutral-800 text-white hover:bg-neutral-700 hover:text-white focus:text-white text-sm px-4 h-9"
+              className="hidden h-9 rounded-full border-neutral-700 bg-neutral-800 px-4 text-sm text-white hover:bg-neutral-700 hover:text-white focus:text-white sm:inline-flex"
               onClick={() => router.push('/sign-up')}
             >
               Sign up for free
             </Button>
 
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 text-white hover:text-white hover:bg-neutral-700 rounded-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full text-white hover:bg-neutral-700 hover:text-white sm:h-10 sm:w-10"
+            >
               <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8">
-          <div className="mb-8 sm:mb-12 text-center">
-            <h2 className="mb-4 text-3xl sm:text-4xl font-medium">ChatGPT</h2>
+        <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
+          <div className="mb-8 text-center sm:mb-12">
+            <h2 className="mb-4 text-3xl font-medium sm:text-4xl">ChatGPT</h2>
           </div>
 
           <div className="w-full max-w-xs sm:max-w-2xl md:max-w-3xl">
-            <Card className="rounded-xl sm:rounded-2xl border-neutral-800 bg-neutral-700">
+            <Card className="rounded-xl border-neutral-800 bg-neutral-700 sm:rounded-2xl">
               <CardContent className="p-0">
                 <div className="relative">
                   <Textarea
                     placeholder="Ask anything"
-                    className="max-h-[120px] sm:max-h-[200px] min-h-[40px] sm:min-h-[50px] w-full resize-none border-none bg-transparent px-3 sm:px-4 pt-3 sm:pt-4 pb-12 sm:pb-14 text-sm sm:text-base leading-relaxed text-white placeholder-gray-400 outline-none focus-visible:ring-0"
+                    className="max-h-[120px] min-h-[40px] w-full resize-none border-none bg-transparent px-3 pb-5 text-sm leading-relaxed text-white placeholder-gray-400 outline-none focus-visible:ring-0 sm:max-h-[200px] sm:min-h-[50px] sm:pb-10 sm:text-base"
                     style={{
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none',
                     }}
                   />
 
-                  <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 flex items-center space-x-1 sm:space-x-2">
+                  <div className="absolute bottom-2 left-2 flex items-center space-x-1 sm:bottom-3 sm:left-3 sm:space-x-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 hover:text-gray-200 hover:bg-neutral-600 rounded-full"
+                      className="h-6 w-6 rounded-full text-gray-400 hover:bg-neutral-600 hover:text-gray-200 sm:h-8 sm:w-8"
                     >
                       <Paperclip className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 hover:text-gray-200 hover:bg-neutral-600 rounded-full"
+                      className="h-6 w-6 rounded-full text-gray-400 hover:bg-neutral-600 hover:text-gray-200 sm:h-8 sm:w-8"
                     >
                       <Search className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 hover:text-gray-200 hover:bg-neutral-600 rounded-full"
+                      className="h-6 w-6 rounded-full text-gray-400 hover:bg-neutral-600 hover:text-gray-200 sm:h-8 sm:w-8"
                     >
                       <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
 
-                  <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3">
+                  <div className="absolute right-2 bottom-2 sm:right-3 sm:bottom-3">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 hover:text-gray-200 hover:bg-neutral-600 rounded-full"
+                      className="h-6 w-6 rounded-full text-gray-400 hover:bg-neutral-600 hover:text-gray-200 sm:h-8 sm:w-8"
                     >
                       <Mic className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
@@ -378,7 +385,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <div className="mt-4 sm:mt-6 mb-6 sm:mb-8 flex flex-wrap justify-center gap-2 sm:gap-3">
+            <div className="mt-4 mb-6 flex flex-wrap justify-center gap-2 sm:mt-6 sm:mb-8 sm:gap-3">
               {[
                 { icon: FileText, label: 'Summarize text', color: 'text-orange-400' },
                 { icon: Lightbulb, label: 'Brainstorm', color: 'text-yellow-400' },
@@ -390,7 +397,7 @@ export default function Home() {
                 <Button
                   key={index}
                   variant="outline"
-                  className="flex items-center space-x-1.5 sm:space-x-2 rounded-full border-gray-600 bg-neutral-800 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium hover:bg-neutral-700"
+                  className="flex items-center space-x-1.5 rounded-full border-gray-600 bg-neutral-800 px-3 py-1.5 text-xs font-medium hover:bg-neutral-700 sm:space-x-2 sm:px-4 sm:py-2 sm:text-sm"
                 >
                   <item.icon className={`h-3 w-3 sm:h-4 sm:w-4 ${item.color}`} />
                   <span className="text-gray-500">{item.label}</span>
@@ -400,19 +407,25 @@ export default function Home() {
           </div>
         </div>
 
-        <footer className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-          <p className="text-xs sm:text-sm text-gray-400">
+        <footer className="px-4 py-3 text-center sm:px-6 sm:py-4">
+          <p className="text-xs text-gray-400 sm:text-sm">
             By messaging ChatGPT, you agree to our{' '}
-            <Button variant="link" className="h-auto p-0 text-gray-300 hover:text-white text-xs sm:text-sm">
+            <Button
+              variant="link"
+              className="h-auto p-0 text-xs text-gray-300 hover:text-white sm:text-sm"
+            >
               Terms
             </Button>{' '}
             and have read our{' '}
-            <Button variant="link" className="h-auto p-0 text-gray-300 hover:text-white text-xs sm:text-sm">
+            <Button
+              variant="link"
+              className="h-auto p-0 text-xs text-gray-300 hover:text-white sm:text-sm"
+            >
               Privacy Policy
             </Button>
             <span className="hidden sm:inline">
               . See{' '}
-              <Button variant="link" className="h-auto p-0 text-gray-300 hover:text-white text-sm">
+              <Button variant="link" className="h-auto p-0 text-sm text-gray-300 hover:text-white">
                 Cookie Preferences
               </Button>
             </span>
@@ -445,8 +458,7 @@ export default function Home() {
         />
       )}
 
-      <div className="relative flex flex-1 flex-col min-w-0">
-
+      <div className="relative flex min-w-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-gray-700 p-3 sm:p-4 lg:hidden">
           <Button
             variant="ghost"
@@ -456,15 +468,15 @@ export default function Home() {
           >
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
-          <h1 className="text-base sm:text-lg font-semibold">ChatGPT</h1>
+          <h1 className="text-base font-semibold sm:text-lg">ChatGPT</h1>
           <div className="w-8" />
         </div>
 
         <div className="flex-1 overflow-hidden">
           {currentChatId ? (
-            <Chat 
-              key={currentChatId} 
-              chatId={currentChatId} 
+            <Chat
+              key={currentChatId}
+              chatId={currentChatId}
               onChatUpdate={handleChatUpdate}
               useChatHook={chatHook}
             />
@@ -473,21 +485,22 @@ export default function Home() {
               {status === 'streaming' && (
                 <div className="flex justify-center p-4">
                   <div className="rounded-lg bg-neutral-700 p-3 sm:p-4">
-                    <div className="animate-pulse text-sm sm:text-base text-gray-100">AI is thinking...</div>
+                    <div className="animate-pulse text-sm text-gray-100 sm:text-base">
+                      AI is thinking...
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="hidden md:flex flex-1 items-center justify-center px-6">
+              <div className="hidden flex-1 items-center justify-center px-6 md:flex">
                 <div className="w-full max-w-3xl text-center">
-
                   <div className="mb-8">
                     <h1 className="text-4xl font-normal text-white">Ready when you are.</h1>
                   </div>
 
                   <form onSubmit={handleInputSubmit}>
                     {attachedFiles.length > 0 && (
-                      <div className="mb-3 flex max-h-32 flex-wrap gap-2 overflow-y-auto justify-center">
+                      <div className="mb-3 flex max-h-32 flex-wrap justify-center gap-2 overflow-y-auto">
                         {attachedFiles.map((file, index) => {
                           const fileType = getFileType(file.mimeType)
 
@@ -519,7 +532,9 @@ export default function Home() {
                                     className="mt-1 w-full truncate text-center text-xs text-gray-300"
                                     title={file.name}
                                   >
-                                    {file.name.length > 6 ? file.name.substring(0, 4) + '..' : file.name}
+                                    {file.name.length > 6
+                                      ? file.name.substring(0, 4) + '..'
+                                      : file.name}
                                   </span>
                                   <button
                                     type="button"
@@ -537,17 +552,17 @@ export default function Home() {
                     )}
 
                     <div className="relative flex items-end rounded-3xl bg-neutral-700 p-3 shadow-sm">
-                      <div className="flex items-center space-x-2 shrink-0 pb-1">
+                      <div className="flex shrink-0 items-center space-x-2 pb-1">
                         <InputOptions onFileUpload={handleFileUpload} />
                       </div>
 
-                      <div className="flex-1 min-w-0 mx-3">
+                      <div className="mx-3 min-w-0 flex-1">
                         <textarea
                           ref={textareaRef}
                           value={input}
                           onChange={handleInputChange}
                           placeholder="Ask anything"
-                          className="w-full resize-none bg-transparent text-base text-white placeholder-gray-400 outline-none min-h-[20px] max-h-[120px] py-2"
+                          className="max-h-[120px] min-h-[20px] w-full resize-none bg-transparent py-2 text-base text-white placeholder-gray-400 outline-none"
                           disabled={isCreatingChat || status === 'streaming'}
                           rows={1}
                           style={{
@@ -557,7 +572,11 @@ export default function Home() {
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault()
-                              if ((input.trim() || attachedFiles.length > 0) && !isCreatingChat && status !== 'streaming') {
+                              if (
+                                (input.trim() || attachedFiles.length > 0) &&
+                                !isCreatingChat &&
+                                status !== 'streaming'
+                              ) {
                                 handleInputSubmit(e)
                               }
                             }
@@ -565,24 +584,30 @@ export default function Home() {
                         />
                       </div>
 
-                      <div className="flex items-center space-x-2 shrink-0">
+                      <div className="flex shrink-0 items-center space-x-2">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-white rounded-full hover:text-white hover:bg-neutral-600 transition-colors mb-1"
+                          className="mb-1 h-8 w-8 rounded-full text-white transition-colors hover:bg-neutral-600 hover:text-white"
                           disabled={isCreatingChat || status === 'streaming'}
                         >
                           <Mic className="h-4 w-4" />
                         </Button>
-                        
+
                         <Button
                           type="submit"
-                          disabled={isCreatingChat || status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)}
-                          className={`h-8 w-8 mb-1 rounded-full p-0 transition-colors shrink-0 ${
-                            (input.trim() || attachedFiles.length > 0) && !isCreatingChat && status !== 'streaming'
-                              ? "bg-white text-black hover:bg-gray-200" 
-                              : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          disabled={
+                            isCreatingChat ||
+                            status === 'streaming' ||
+                            (input.trim() === '' && attachedFiles.length === 0)
+                          }
+                          className={`mb-1 h-8 w-8 shrink-0 rounded-full p-0 transition-colors ${
+                            (input.trim() || attachedFiles.length > 0) &&
+                            !isCreatingChat &&
+                            status !== 'streaming'
+                              ? 'bg-white text-black hover:bg-gray-200'
+                              : 'cursor-not-allowed bg-gray-600 text-gray-400'
                           }`}
                         >
                           {isCreatingChat || status === 'streaming' ? (
@@ -621,19 +646,20 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="md:hidden flex flex-col h-full">
-
-                <div className="flex-1 flex items-center justify-center px-4 sm:px-6">
+              <div className="flex h-full flex-col md:hidden">
+                <div className="flex flex-1 items-center justify-center px-4 sm:px-6">
                   <div className="text-center">
-                    <h1 className="text-2xl sm:text-3xl font-normal text-white">Ready when you are.</h1>
+                    <h1 className="text-2xl font-normal text-white sm:text-3xl">
+                      Ready when you are.
+                    </h1>
                   </div>
                 </div>
 
-                <div className="w-full px-3 sm:px-4 pb-4 sm:pb-6">
+                <div className="w-full px-3 pb-4 sm:px-4 sm:pb-6">
                   <div className="mx-auto max-w-full sm:max-w-2xl">
                     <form onSubmit={handleInputSubmit}>
                       {attachedFiles.length > 0 && (
-                        <div className="mb-3 flex max-h-24 sm:max-h-32 flex-wrap gap-2 overflow-y-auto">
+                        <div className="mb-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto sm:max-h-32">
                           {attachedFiles.map((file, index) => {
                             const fileType = getFileType(file.mimeType)
 
@@ -644,35 +670,37 @@ export default function Home() {
                                     <img
                                       src={file.url || file.cdnUrl}
                                       alt={file.name}
-                                      className="h-12 w-12 sm:h-16 sm:w-16 rounded-md border-2 border-gray-600 object-cover"
+                                      className="h-12 w-12 rounded-md border-2 border-gray-600 object-cover sm:h-16 sm:w-16"
                                     />
                                     <div className="bg-opacity-0 group-hover:bg-opacity-30 absolute inset-0 flex items-center justify-center rounded-md bg-black transition-all">
                                       <button
                                         type="button"
                                         onClick={() => removeFile(index)}
-                                        className="rounded-full bg-red-500 p-0.5 sm:p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                        className="rounded-full bg-red-500 p-0.5 opacity-0 transition-opacity group-hover:opacity-100 sm:p-1"
                                       >
-                                        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
+                                        <X className="h-2.5 w-2.5 text-white sm:h-3 sm:w-3" />
                                       </button>
                                     </div>
                                   </div>
                                 ) : (
                                   <div
-                                    className={`h-12 w-16 sm:h-16 sm:w-20 rounded-md border-2 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
+                                    className={`h-12 w-16 rounded-md border-2 sm:h-16 sm:w-20 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
                                   >
                                     {getFileIcon(fileType, 'h-4 w-4 sm:h-5 sm:w-5')}
                                     <span
-                                      className="mt-0.5 sm:mt-1 w-full truncate text-center text-xs text-gray-300"
+                                      className="mt-0.5 w-full truncate text-center text-xs text-gray-300 sm:mt-1"
                                       title={file.name}
                                     >
-                                      {file.name.length > 6 ? file.name.substring(0, 4) + '..' : file.name}
+                                      {file.name.length > 6
+                                        ? file.name.substring(0, 4) + '..'
+                                        : file.name}
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => removeFile(index)}
-                                      className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 rounded-full bg-red-500 p-0.5 sm:p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                      className="absolute -top-1 -right-1 rounded-full bg-red-500 p-0.5 opacity-0 transition-opacity group-hover:opacity-100 sm:-top-2 sm:-right-2 sm:p-1"
                                     >
-                                      <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
+                                      <X className="h-2.5 w-2.5 text-white sm:h-3 sm:w-3" />
                                     </button>
                                   </div>
                                 )}
@@ -682,18 +710,18 @@ export default function Home() {
                         </div>
                       )}
 
-                      <div className="relative flex items-end rounded-2xl sm:rounded-3xl bg-neutral-700 p-2 sm:p-3 shadow-sm">
-                        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+                      <div className="relative flex items-end rounded-2xl bg-neutral-700 p-2 shadow-sm sm:rounded-3xl sm:p-3">
+                        <div className="flex shrink-0 items-center space-x-1 sm:space-x-2">
                           <InputOptions onFileUpload={handleFileUpload} />
                         </div>
 
-                        <div className="flex-1 min-w-0 mx-2 sm:mx-3">
+                        <div className="mx-2 min-w-0 flex-1 sm:mx-3">
                           <textarea
                             ref={textareaRef}
                             value={input}
                             onChange={handleInputChange}
                             placeholder="Ask anything"
-                            className="w-full resize-none bg-transparent text-sm sm:text-base text-white placeholder-gray-400 outline-none min-h-[20px] max-h-[100px] sm:max-h-[120px] py-1 sm:py-2"
+                            className="max-h-[100px] min-h-[20px] w-full resize-none bg-transparent py-1 text-sm text-white placeholder-gray-400 outline-none sm:max-h-[120px] sm:py-2 sm:text-base"
                             disabled={isCreatingChat || status === 'streaming'}
                             rows={1}
                             style={{
@@ -703,7 +731,11 @@ export default function Home() {
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault()
-                                if ((input.trim() || attachedFiles.length > 0) && !isCreatingChat && status !== 'streaming') {
+                                if (
+                                  (input.trim() || attachedFiles.length > 0) &&
+                                  !isCreatingChat &&
+                                  status !== 'streaming'
+                                ) {
                                   handleInputSubmit(e)
                                 }
                               }
@@ -711,28 +743,37 @@ export default function Home() {
                           />
                         </div>
 
-                        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+                        <div className="flex shrink-0 items-center space-x-1 sm:space-x-2">
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 sm:h-8 sm:w-8 text-white rounded-full hover:text-white hover:bg-neutral-600 transition-colors"
+                            className="h-6 w-6 rounded-full text-white transition-colors hover:bg-neutral-600 hover:text-white sm:h-8 sm:w-8"
                             disabled={isCreatingChat || status === 'streaming'}
                           >
                             <Mic className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
-                          
+
                           <Button
                             type="submit"
-                            disabled={isCreatingChat || status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)}
-                            className={`h-6 w-6 sm:h-8 sm:w-8 rounded-full p-0 transition-colors shrink-0 ${
-                              (input.trim() || attachedFiles.length > 0) && !isCreatingChat && status !== 'streaming'
-                                ? "bg-white text-black hover:bg-gray-200" 
-                                : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                            disabled={
+                              isCreatingChat ||
+                              status === 'streaming' ||
+                              (input.trim() === '' && attachedFiles.length === 0)
+                            }
+                            className={`h-6 w-6 shrink-0 rounded-full p-0 transition-colors sm:h-8 sm:w-8 ${
+                              (input.trim() || attachedFiles.length > 0) &&
+                              !isCreatingChat &&
+                              status !== 'streaming'
+                                ? 'bg-white text-black hover:bg-gray-200'
+                                : 'cursor-not-allowed bg-gray-600 text-gray-400'
                             }`}
                           >
                             {isCreatingChat || status === 'streaming' ? (
-                              <svg className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" viewBox="0 0 24 24">
+                              <svg
+                                className="h-3 w-3 animate-spin sm:h-4 sm:w-4"
+                                viewBox="0 0 24 24"
+                              >
                                 <circle
                                   className="opacity-25"
                                   cx="12"
@@ -754,7 +795,7 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="mt-3 sm:mt-4 text-center">
+                      <div className="mt-3 text-center sm:mt-4">
                         <p className="text-xs text-gray-500">
                           ChatGPT can make mistakes. Check important info.{' '}
                           <span className="hidden sm:inline">

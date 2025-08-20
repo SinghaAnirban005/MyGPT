@@ -41,9 +41,7 @@ export function SidebarOptions({ collapsed }: UserMenuProps) {
               <div className="truncate text-sm font-medium text-white">
                 {user?.firstName} {user?.lastName}
               </div>
-              <div className="truncate text-xs text-gray-400">
-                Free
-              </div>
+              <div className="truncate text-xs text-gray-400">Free</div>
             </div>
           )}
         </div>
@@ -52,30 +50,22 @@ export function SidebarOptions({ collapsed }: UserMenuProps) {
         align="start"
         className="w-66 border border-gray-600 bg-neutral-700 text-white shadow-xl shadow-black/40"
       >
-        <DropdownMenuItem
-          className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
-        >
+        <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
           <Sparkles className="mr-2 h-4 w-4 text-white" />
           <span>Upgrade Plan</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
-        >
+        <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
           <Palette className="mr-2 h-4 w-4 text-white" />
           <span>Customize ChatGPT</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
-        >
+        <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
           <Settings className="mr-2 h-4 w-4 text-white" />
           <span>Settings</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white"
-        >
+        <DropdownMenuItem className="cursor-pointer text-white hover:bg-neutral-600 hover:text-white focus:bg-neutral-600 focus:text-white">
           <HelpCircle className="mr-2 h-4 w-4 text-white" />
           <span>Help</span>
         </DropdownMenuItem>
