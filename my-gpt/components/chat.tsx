@@ -21,6 +21,7 @@ interface ChatProps {
 export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { user, isLoaded, isSignedIn } = useUser()
   const [input, setInput] = useState('')
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
@@ -56,6 +57,18 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
       }
     },
   })
+
+  // Auto-resize textarea
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
+    }
+  }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [input])
 
   useEffect(() => {
     if (chatId && isSignedIn) {
@@ -228,6 +241,11 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
     setInput('')
     const currentFiles = [...attachedFiles]
     setAttachedFiles([])
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
 
     try {
       const userMessageData = {
@@ -466,11 +484,11 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
 
     if (fileType === 'image') {
       return (
-        <div className="mt-2 max-w-md overflow-hidden rounded-lg">
+        <div className="mt-2 max-w-xs sm:max-w-sm md:max-w-md overflow-hidden rounded-lg">
           <img
             src={url}
             alt={name}
-            className="max-h-[300px] max-w-full rounded-lg object-contain"
+            className="max-h-[200px] sm:max-h-[250px] md:max-h-[300px] max-w-full rounded-lg object-contain"
             onError={(e) => {
               // Fallback to file card if image fails to load
               e.currentTarget.style.display = 'none'
@@ -488,10 +506,10 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
     // Video preview
     if (fileType === 'video') {
       return (
-        <div className="mt-2 max-w-md overflow-hidden rounded-lg">
+        <div className="mt-2 max-w-xs sm:max-w-sm md:max-w-md overflow-hidden rounded-lg">
           <video
             controls
-            className="max-h-[300px] max-w-full rounded-lg"
+            className="max-h-[200px] sm:max-h-[250px] md:max-h-[300px] max-w-full rounded-lg"
             onError={(e) => {
               e.currentTarget.style.display = 'none'
               const nextElement = e.currentTarget.nextElementSibling as HTMLElement
@@ -511,7 +529,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
     // Audio preview
     if (fileType === 'audio') {
       return (
-        <div className="mt-2 max-w-md">
+        <div className="mt-2 max-w-xs sm:max-w-sm md:max-w-md">
           <audio
             controls
             className="w-full rounded-lg"
@@ -546,12 +564,12 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
     const colorClasses = getFileColor(fileType)
 
     return (
-      <div className={`mt-2 max-w-md rounded-lg border-2 p-4 ${colorClasses}`}>
-        <div className="flex items-start gap-3">
-          {getFileIcon(fileType, 'h-8 w-8')}
+      <div className={`mt-2 max-w-xs sm:max-w-sm md:max-w-md rounded-lg border-2 p-3 sm:p-4 ${colorClasses}`}>
+        <div className="flex items-start gap-2 sm:gap-3">
+          {getFileIcon(fileType, 'h-6 w-6 sm:h-8 sm:w-8')}
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
-              <h4 className="truncate text-sm font-medium text-white" title={name}>
+              <h4 className="truncate text-xs sm:text-sm font-medium text-white" title={name}>
                 {name}
               </h4>
             </div>
@@ -580,7 +598,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                 className="flex items-center gap-1 rounded bg-neutral-700 px-2 py-1 text-xs text-blue-400 transition-colors hover:bg-neutral-600 hover:text-blue-300"
               >
                 <Eye className="h-3 w-3" />
-                View
+                <span className="hidden sm:inline">View</span>
               </a>
               <a
                 href={url}
@@ -588,7 +606,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                 className="flex items-center gap-1 rounded bg-neutral-700 px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-neutral-600 hover:text-white"
               >
                 <Download className="h-3 w-3" />
-                Download
+                <span className="hidden sm:inline">Download</span>
               </a>
             </div>
           </div>
@@ -600,15 +618,15 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
   if (!isLoaded || loadingChat) {
     return (
       <div className="flex h-full flex-col bg-neutral-800">
-        <div className="flex items-center justify-between border-b border-gray-700 p-4">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-8 w-8 rounded-full" />
+        <div className="flex items-center justify-between border-b border-gray-700 p-3 sm:p-4">
+          <Skeleton className="h-6 sm:h-8 w-24 sm:w-32" />
+          <Skeleton className="h-6 w-6 sm:h-8 sm:w-8 rounded-full" />
         </div>
-        <div className="flex-1 space-y-8 p-4">
+        <div className="flex-1 space-y-6 sm:space-y-8 p-3 sm:p-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-start gap-4">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-16 w-full rounded-md" />
+            <div key={i} className="flex items-start gap-3 sm:gap-4">
+              <Skeleton className="h-6 w-6 sm:h-8 sm:w-8 rounded-full" />
+              <Skeleton className="h-12 sm:h-16 w-full rounded-md" />
             </div>
           ))}
         </div>
@@ -635,8 +653,8 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
 
   return (
     <div className="flex h-full flex-col bg-neutral-800">
-      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-3xl space-y-6">
+      <div ref={messagesContainerRef} className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
+        <div className="mx-auto max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl space-y-4 sm:space-y-6">
           {messages.map((message, index) => {
             console.log('MESSAGE ', message)
             const textParts =
@@ -666,14 +684,18 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
               <div
                 key={message.id}
                 className={cn(
-                  'group relative',
-                  isUserMessage ? 'flex flex-col items-end' : 'flex flex-col items-start'
+                  'group relative w-full',
+                  isUserMessage 
+                    ? 'flex flex-col items-end' 
+                    : 'flex flex-col items-start'
                 )}
               >
                 <div
                   className={cn(
-                    'max-w-[80%] rounded-xl p-4',
-                    isUserMessage ? 'bg-neutral-700 text-white' : 'bg-neutral-800 text-gray-100'
+                    'relative w-full max-w-[85%] sm:max-w-[80%] md:max-w-[75%] lg:max-w-[70%] rounded-xl p-3 sm:p-4',
+                    isUserMessage 
+                      ? 'bg-neutral-700 text-white ml-auto' 
+                      : 'bg-neutral-800 text-gray-100 mr-auto'
                   )}
                 >
                   {isEditing ? (
@@ -682,8 +704,8 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                         <textarea
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
-                          className="max-h-[300px] min-h-[100px] w-full resize-none rounded-lg bg-neutral-700 p-3 text-white focus:border-transparent focus:ring-0 focus:outline-none"
-                          rows={4}
+                          className="max-h-[200px] sm:max-h-[300px] min-h-[80px] sm:min-h-[100px] w-full resize-none rounded-lg bg-neutral-700 p-2 sm:p-3 text-sm sm:text-base text-white focus:border-transparent focus:ring-0 focus:outline-none"
+                          rows={3}
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Escape') {
@@ -706,13 +728,13 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                                   <img
                                     src={file.url || file.cdnUrl}
                                     alt={file.filename || file.name}
-                                    className="h-12 w-12 rounded-md border border-gray-600 object-cover"
+                                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-md border border-gray-600 object-cover"
                                   />
                                 ) : (
-                                  <div className={`h-12 w-16 rounded-md border ${getFileColor(getFileType(file.mediaType || file.mimeType))} flex flex-col items-center justify-center p-1`}>
-                                    {getFileIcon(getFileType(file.mediaType || file.mimeType), 'h-4 w-4')}
+                                  <div className={`h-10 w-12 sm:h-12 sm:w-16 rounded-md border ${getFileColor(getFileType(file.mediaType || file.mimeType))} flex flex-col items-center justify-center p-1`}>
+                                    {getFileIcon(getFileType(file.mediaType || file.mimeType), 'h-3 w-3 sm:h-4 sm:w-4')}
                                     <span className="mt-0.5 w-full truncate text-center text-xs text-gray-300" title={file.filename || file.name}>
-                                      {(file.filename || file.name).length > 6 ? (file.filename || file.name).substring(0, 4) + '..' : (file.filename || file.name)}
+                                      {(file.filename || file.name).length > 4 ? (file.filename || file.name).substring(0, 3) + '..' : (file.filename || file.name)}
                                     </span>
                                   </div>
                                 )}
@@ -728,7 +750,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                           variant="ghost"
                           onClick={cancelEditing}
                           disabled={status === 'streaming'}
-                          className="h-8 rounded-full bg-black px-3 text-gray-300 hover:bg-neutral-900 hover:text-white"
+                          className="h-7 sm:h-8 rounded-full bg-black px-2 sm:px-3 text-xs sm:text-sm text-gray-300 hover:bg-neutral-900 hover:text-white"
                         >
                           Cancel
                         </Button>
@@ -736,7 +758,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                           size="sm"
                           onClick={() => saveEditedMessage(message.id)}
                           disabled={!editingText.trim() || status === 'streaming'}
-                          className="h-8 rounded-full bg-white px-3 text-black hover:bg-gray-200"
+                          className="h-7 sm:h-8 rounded-full bg-white px-2 sm:px-3 text-xs sm:text-sm text-black hover:bg-gray-200"
                         >
                           {status === 'streaming' ? (
                             <span className="flex items-center gap-1.5">
@@ -755,7 +777,8 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                 ></path>
                               </svg>
-                              Generating...
+                              <span className="hidden sm:inline">Generating...</span>
+                              <span className="sm:hidden">...</span>
                             </span>
                           ) : (
                             <span className="flex items-center gap-1.5">
@@ -767,7 +790,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                     </div>
                   ) : (
                     <div className="relative">
-                      <div className="break-words whitespace-pre-wrap">{textParts}</div>
+                      <div className="break-words whitespace-pre-wrap text-sm sm:text-base">{textParts}</div>
 
                       {fileParts.length > 0 &&
                         fileParts.map((file, fileIndex) => (
@@ -780,7 +803,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                 </div>
 
                 {isUserMessage && !isEditing && (
-                  <div className="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="mt-1 sm:mt-2 flex gap-1 sm:gap-2 opacity-0 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -788,9 +811,9 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                           variant="ghost"
                           onClick={() => startEditingMessage(message.id, textParts)}
                           disabled={status === 'streaming'}
-                          className="h-8 p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white"
+                          className="h-6 w-6 sm:h-8 sm:w-8 p-1 sm:p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white rounded-full transition-colors"
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -808,19 +831,19 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
 
           {status === 'streaming' && (
             <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-xl bg-neutral-800 p-4 text-gray-100">
-                <div className="animate-pulse">Thinking...</div>
+              <div className="max-w-[85%] sm:max-w-[80%] md:max-w-[75%] lg:max-w-[70%] rounded-xl bg-neutral-800 p-3 sm:p-4 text-gray-100 mr-auto">
+                <div className="animate-pulse text-sm sm:text-base">Thinking...</div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-       <div className="border-gray-700 bg-neutral-800 p-4">
-        <form onSubmit={onSubmit} className="mx-auto max-w-3xl">
+      <div className="border-gray-700 bg-neutral-800 p-3 sm:p-4">
+        <form onSubmit={onSubmit} className="mx-auto max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
           <div className="relative">
             {attachedFiles.length > 0 && (
-              <div className="mb-3 flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+              <div className="mb-3 flex max-h-24 sm:max-h-32 flex-wrap gap-2 overflow-y-auto">
                 {attachedFiles.map((file, index) => {
                   const fileType = getFileType(file.mimeType)
 
@@ -831,7 +854,7 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                           <img
                             src={file.url || file.cdnUrl}
                             alt={file.name}
-                            className="h-16 w-16 rounded-md border-2 border-gray-600 object-cover"
+                            className="h-12 w-12 sm:h-16 sm:w-16 rounded-md border-2 border-gray-600 object-cover"
                           />
                           <div className="bg-opacity-0 group-hover:bg-opacity-30 absolute inset-0 flex items-center justify-center rounded-md bg-black transition-all">
                             <button
@@ -839,31 +862,31 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                               onClick={() => {
                                 setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
                               }}
-                              className="rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                              className="rounded-full bg-red-500 p-0.5 sm:p-1 opacity-0 transition-opacity group-hover:opacity-100"
                             >
-                              <X className="h-3 w-3 text-white" />
+                              <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                             </button>
                           </div>
                         </div>
                       ) : (
                         <div
-                          className={`h-16 w-20 rounded-md border-2 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
+                          className={`h-12 w-16 sm:h-16 sm:w-20 rounded-md border-2 ${getFileColor(fileType)} group-hover:bg-opacity-20 relative flex flex-col items-center justify-center p-1 transition-all`}
                         >
-                          {getFileIcon(fileType, 'h-5 w-5')}
+                          {getFileIcon(fileType, 'h-4 w-4 sm:h-5 sm:w-5')}
                           <span
-                            className="mt-1 w-full truncate text-center text-xs text-gray-300"
+                            className="mt-0.5 sm:mt-1 w-full truncate text-center text-xs text-gray-300"
                             title={file.name}
                           >
-                            {file.name.length > 8 ? file.name.substring(0, 6) + '...' : file.name}
+                            {file.name.length > 6 ? file.name.substring(0, 4) + '..' : file.name}
                           </span>
                           <button
                             type="button"
                             onClick={() => {
                               setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
                             }}
-                            className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                            className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 rounded-full bg-red-500 p-0.5 sm:p-1 opacity-0 transition-opacity group-hover:opacity-100"
                           >
-                            <X className="h-3 w-3 text-white" />
+                            <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                           </button>
                         </div>
                       )}
@@ -873,37 +896,44 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
               </div>
             )}
 
-            <div className="relative flex items-center rounded-full bg-neutral-700 px-4 py-3 shadow-sm">
-              <div className="flex items-center space-x-2">
+            <div className="relative flex items-end rounded-2xl sm:rounded-3xl bg-neutral-700 p-2 sm:p-3 shadow-sm">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0 pb-1">
                 <InputOptions onFileUpload={handleFileUpload} />
               </div>
 
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask anything"
-                className="flex-1 bg-transparent px-3 text-white placeholder-gray-400 outline-none"
-                disabled={status === 'streaming'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    if (input.trim() || attachedFiles.length > 0) {
-                      onSubmit(e)
+              <div className="flex-1 min-w-0 mx-2 sm:mx-3">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Message ChatGPT"
+                  className="w-full resize-none bg-transparent text-sm sm:text-base text-white placeholder-gray-400 outline-none min-h-[20px] max-h-[120px] sm:max-h-[200px] py-1 sm:py-2"
+                  disabled={status === 'streaming'}
+                  rows={1}
+                  style={{
+                    height: 'auto',
+                    lineHeight: '1.5',
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      if (input.trim() || attachedFiles.length > 0) {
+                        onSubmit(e)
+                      }
                     }
-                  }
-                }}
-              />
+                  }}
+                />
+              </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white rounded-full hover:text-white hover:bg-neutral-600"
+                  className="h-7 w-7 sm:h-8 sm:w-8 text-white rounded-full hover:text-white hover:bg-neutral-600 transition-colors mb-1"
                   disabled={status === 'streaming'}
                 >
-                  <Mic className="h-4 w-4" />
+                  <Mic className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
                 
                 <Button
@@ -911,20 +941,28 @@ export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
                   disabled={
                     status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)
                   }
-                  className="h-8 w-8 rounded-full bg-white p-0 text-black hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400"
+                  className={cn(
+                    "h-7 w-7 sm:h-8 sm:w-8 rounded-full p-0 transition-colors shrink-0 mb-1",
+                    (input.trim() || attachedFiles.length > 0) && status !== 'streaming'
+                      ? "bg-white text-black hover:bg-gray-200" 
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  )}
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  <ArrowUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
 
             <div className="mt-2 text-center">
               <p className="text-xs text-gray-500">
-                ChatGPT can make mistakes. Check important info. See{' '}
-                <button className="text-gray-400 underline hover:text-gray-300">
-                  Cookie Preferences
-                </button>
-                .
+                ChatGPT can make mistakes. Check important info.{' '}
+                <span className="hidden sm:inline">
+                  See{' '}
+                  <button className="text-gray-400 underline hover:text-gray-300">
+                    Cookie Preferences
+                  </button>
+                  .
+                </span>
               </p>
             </div>
           </div>
