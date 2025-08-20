@@ -4,12 +4,8 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal, Share, Archive, Trash2, Edit3 } from 'lucide-react'
 
-interface ChatOptionsProps {
-  chatId: string
-  onDelete: (chatId: string) => void
-}
 
-export function ChatOptions({ chatId, onDelete }: ChatOptionsProps) {
+export function ChatOptions() {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -59,7 +55,6 @@ export function ChatOptions({ chatId, onDelete }: ChatOptionsProps) {
 
         <DropdownMenuItem 
           className="cursor-pointer text-red-400 hover:bg-neutral-600 hover:text-red-300 focus:bg-neutral-600 focus:text-red-300"
-          onClick={() => onDelete(chatId)}
         >
           <Trash2 className="mr-2 h-4 w-4 text-red-400" />
           <span>Delete</span>

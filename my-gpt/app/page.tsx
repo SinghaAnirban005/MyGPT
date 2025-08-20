@@ -1,8 +1,8 @@
-// app/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -41,6 +41,32 @@ export default function Home() {
   const [isCreatingChat, setIsCreatingChat] = useState(false)
   const router = useRouter()
 
+  const currentChatIdRef = useRef(currentChatId)
+  currentChatIdRef.current = currentChatId
+
+  const chatHook = useChat({
+    onFinish: async (message: any) => {
+
+      const currentId = currentChatIdRef.current
+      if (currentId) {
+        await saveAssistantMessage(currentId, message)
+        
+        setChatUpdateTrigger((prev) => prev + 1)
+      } else {
+        console.error('Cannot save assistant message: currentChatId is empty')
+      }
+    },
+
+    onError: (error: any) => {
+      console.error('Chat error:', error)
+      if (error.message.includes('Unauthorized')) {
+        window.location.href = '/sign-in'
+      }
+    },
+  })
+
+  const { sendMessage: sendAIMessage, status } = chatHook
+
   const createNewChat = async () => {
     try {
       const response = await fetch('/api/chats', {
@@ -75,9 +101,61 @@ export default function Home() {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const saveAssistantMessage = async (chatId: string, assistantMessage: any) => {
+    try {
+      console.log('Saving assistant message for chat:', chatId)
+
+      const existingResponse = await fetch(`/api/chats/${chatId}`)
+      let existingMessages = []
+
+      if (existingResponse.ok) {
+        const chatData = await existingResponse.json()
+        existingMessages = chatData.chat?.messages || []
+      }
+
+      const messageObj = assistantMessage.message || assistantMessage
+
+      const formattedAssistantMessage = {
+        id: messageObj.id,
+        role: messageObj.role,
+        content: Array.isArray(messageObj.parts)
+          ? messageObj.parts
+              .filter((p: any) => p.type === 'text' && p.text)
+              .map((p: any) => p.text)
+              .join('') || ''
+          : typeof messageObj.content === 'string'
+            ? messageObj.content
+            : '',
+        parts: messageObj.parts || [{ type: 'text', text: messageObj.content }],
+        timestamp: new Date(),
+      }
+
+      const allMessages = [...existingMessages, formattedAssistantMessage]
+
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: allMessages,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to save assistant message: ${response.statusText}`)
+      }
+
+      console.log('Assistant message saved successfully')
+      return allMessages
+    } catch (error) {
+      console.error('Error saving assistant message:', error)
+      throw error
+    }
+  }
+
   const sendInitialMessage = async (chatId: string, message: string, files: FileData[] = []) => {
     try {
-      // First save the user message
       const userMessageData = {
         text: message,
         files:
@@ -134,6 +212,22 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`Failed to save initial message: ${response.statusText}`)
       }
+
+      if (files.length > 0) {
+        await sendAIMessage({
+          text: message,
+          files: files.map((file) => ({
+            type: 'file' as const,
+            mediaType: file.mimeType,
+            filename: file.name,
+            url: file.cdnUrl,
+          })),
+        })
+      } else {
+        await sendAIMessage({
+          text: message,
+        })
+      }
     } catch (error) {
       console.error('Error sending initial message:', error)
     }
@@ -143,23 +237,20 @@ export default function Home() {
     e.preventDefault()
 
     const text = input.trim()
-    if ((!text && attachedFiles.length === 0) || isCreatingChat) return
+    if ((!text && attachedFiles.length === 0) || isCreatingChat || status === 'streaming') return
 
     setIsCreatingChat(true)
     
     try {
-      // Create new chat
       const newChatId = await createNewChat()
       
       if (newChatId && (text || attachedFiles.length > 0)) {
-        // Send the initial message
+      
         await sendInitialMessage(newChatId, text, attachedFiles)
         
-        // Clear the input and files
         setInput('')
         setAttachedFiles([])
         
-        // Update chat trigger to refresh sidebar
         setChatUpdateTrigger((prev) => prev + 1)
       }
     } catch (error) {
@@ -321,11 +412,12 @@ if (!isSignedIn || !user) {
       />
 
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/80 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+  <div
+    className="fixed inset-0 z-40 bg-black/80 lg:hidden"
+    onClick={() => setSidebarOpen(false)}
+  />
+)}
+
 
       <div className="relative flex flex-1 flex-col">
         <div className="flex items-center justify-between border-b border-gray-700 p-4 lg:hidden">
@@ -343,9 +435,19 @@ if (!isSignedIn || !user) {
 
         <div className="flex-1 overflow-hidden">
           {currentChatId ? (
-            <Chat key={currentChatId} chatId={currentChatId} onChatUpdate={handleChatUpdate} />
+            <Chat 
+              key={currentChatId} 
+              chatId={currentChatId} 
+              onChatUpdate={handleChatUpdate}
+              useChatHook={chatHook}
+            />
           ) : (
             <div className="flex h-full flex-col items-center justify-center bg-neutral-800">
+              {status === 'streaming' && (
+                <div className="mb-4 rounded-lg bg-neutral-700 p-4">
+                  <div className="animate-pulse text-gray-100">AI is thinking...</div>
+                </div>
+              )}
 
               <div className="mb-8 text-center">
                 <h1 className="text-3xl font-normal text-white">Ready when you are.</h1>
@@ -414,11 +516,11 @@ if (!isSignedIn || !user) {
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask anything"
                       className="flex-1 bg-transparent px-3 text-white placeholder-gray-400 outline-none"
-                      disabled={isCreatingChat}
+                      disabled={isCreatingChat || status === 'streaming'}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
-                          if ((input.trim() || attachedFiles.length > 0) && !isCreatingChat) {
+                          if ((input.trim() || attachedFiles.length > 0) && !isCreatingChat && status !== 'streaming') {
                             handleInputSubmit(e)
                           }
                         }
@@ -431,17 +533,17 @@ if (!isSignedIn || !user) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-white rounded-full hover:text-white hover:bg-neutral-600"
-                        disabled={isCreatingChat}
+                        disabled={isCreatingChat || status === 'streaming'}
                       >
                         <Mic className="h-4 w-4" />
                       </Button>
                       
                       <Button
                         type="submit"
-                        disabled={isCreatingChat || (input.trim() === '' && attachedFiles.length === 0)}
+                        disabled={isCreatingChat || status === 'streaming' || (input.trim() === '' && attachedFiles.length === 0)}
                         className="h-8 w-8 rounded-full bg-white p-0 text-black hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400"
                       >
-                        {isCreatingChat ? (
+                        {isCreatingChat || status === 'streaming' ? (
                           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                             <circle
                               className="opacity-25"

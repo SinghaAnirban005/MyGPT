@@ -162,7 +162,7 @@ export function Sidebar({
                 onClick={onCollapse}
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-white hover:bg-neutral-700"
+                className="h-8 w-8 p-0 text-gray-400 hover:bg-neutral-700 hover:text-gray-400"
               >
                 <PanelLeft className="h-4 w-4" />
               </Button>
@@ -231,62 +231,54 @@ export function Sidebar({
       </div>
 
       <div className="mt-4 flex-1 overflow-hidden">
-        {!collapsed ? (
-          <>
-            <div className="px-3 pb-2">
-              <div className="text-sm px-2 font-medium text-gray-400 tracking-wider">
-                Chats
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto px-2">
-              {chats.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <MessageSquare className="h-8 w-8 text-gray-600 mb-2" />
-                  <p className="text-sm text-gray-500">No chats yet</p>
-                  <p className="text-xs text-gray-600">Start a new conversation</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {chats.map((chat) => {
-  const isActive = currentChatId === chat.id
-  const isHovered = hoveredChatId === chat.id
-  return (
-    <div 
-      key={chat.id}
-      className="relative group"
-      onMouseEnter={() => setHoveredChatId(chat.id)}
-      onMouseLeave={() => setHoveredChatId(null)}
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          'h-9 w-full justify-between text-left text-gray-300 hover:bg-neutral-700 hover:text-white px-3 group',
-          isActive && 'bg-neutral-800 text-white'
-        )}
-        onClick={() => onChatSelect(chat.id)}
-      >
-        <span className="truncate text-sm flex-1 text-left pr-2">{chat.title}</span>
-        
-        {(isHovered || isActive) && (
-          <ChatOptions
-            chatId={chat.id}
-            onDelete={handleDeleteChat}
-          />
-        )}
-      </Button>
-    </div>
-  )
-})}
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex-1" />
-        )}
+  {!collapsed && chats.length > 0 && (
+    <>
+      <div className="px-3 pb-2">
+        <div className="text-sm px-2 font-medium text-gray-400 tracking-wider">
+          Chats
+        </div>
       </div>
+      
+      <div className="flex-1 overflow-y-auto px-2">
+        <div className="space-y-1">
+          {chats.map((chat) => {
+            const isActive = currentChatId === chat.id
+            const isHovered = hoveredChatId === chat.id
+            return (
+              <div 
+                key={chat.id}
+                className="relative group"
+                onMouseEnter={() => setHoveredChatId(chat.id)}
+                onMouseLeave={() => setHoveredChatId(null)}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-9 w-full justify-between text-left text-gray-300 hover:bg-neutral-700 hover:text-white px-3 group',
+                    isActive && 'bg-neutral-800 text-white'
+                  )}
+                  onClick={() => onChatSelect(chat.id)}
+                >
+                  <span className="truncate text-sm flex-1 text-left pr-2">{chat.title}</span>
+                  
+                  {(isHovered || isActive) && (
+                    <ChatOptions
+                    />
+                  )}
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
+  )}
+  
+  {collapsed && (
+    <div className="flex-1" />
+  )}
+</div>
 
       <div className="p-2">
         <SidebarOptions collapsed={collapsed} />

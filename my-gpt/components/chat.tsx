@@ -16,9 +16,10 @@ import { hasAttachments } from '@/lib/hasAttachments'
 interface ChatProps {
   chatId: string
   onChatUpdate?: () => void
+  useChatHook?: any
 }
 
-export function Chat({ chatId, onChatUpdate }: ChatProps) {
+export function Chat({ chatId, onChatUpdate, useChatHook }: ChatProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user, isLoaded, isSignedIn } = useUser()
@@ -30,11 +31,12 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
   const [chatTitle, setChatTitle] = useState<string>('')
   const [loadingChat, setLoadingChat] = useState(true)
 
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const { messages, sendMessage, status, setMessages } = useChatHook || useChat({
     onFinish: async (message: any) => {
+      console.log('finally savinf assistant message ', message)
       const updatedMessages = await saveAssistantMessage(message)
 
-      // Now sync the real IDs from database to the local state
+      // syncing the real IDs from database to the local state
       if (updatedMessages) {
         const convertedMessages = updatedMessages.map((msg: any) => ({
           id: msg.id,
@@ -112,7 +114,7 @@ export function Chat({ chatId, onChatUpdate }: ChatProps) {
 
       const lastMessage = messages[messages.length - 1]
 
-      // Check if the last message is a user message with a temporary ID
+      // Checking if the last message is a user message with a temporary ID
       if (lastMessage.role === 'user' && lastMessage.id.startsWith('user-')) {
         try {
           const response = await fetch(`/api/chats/${chatId}`)
