@@ -341,14 +341,14 @@ export default function Home() {
                 <div className="relative">
                   <Textarea
                     placeholder="Ask anything"
-                    className="max-h-[120px] min-h-[40px] w-full resize-none border-none bg-transparent px-3 pb-5 text-sm leading-relaxed text-white placeholder-gray-400 outline-none focus-visible:ring-0 sm:max-h-[200px] sm:min-h-[50px] sm:pb-10 sm:text-base"
+                    className="max-h-[120px] min-h-[40px] w-full resize-none border-none bg-transparent px-5 pb-14 text-sm leading-relaxed text-white placeholder-gray-400 outline-none focus-visible:ring-0 sm:max-h-[200px] sm:min-h-[50px] sm:pb-16 sm:text-base"
                     style={{
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none',
                     }}
                   />
 
-                  <div className="absolute bottom-2 left-2 flex items-center space-x-1 sm:bottom-3 sm:left-3 sm:space-x-2">
+                  <div className="absolute bottom-3 left-3 flex items-center gap-2 sm:gap-3">
                     <Button
                       variant="ghost"
                       size="icon"
